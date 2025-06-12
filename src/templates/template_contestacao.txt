@@ -1,0 +1,45 @@
+EXCELENTÍSSIMO SENHOR DOUTOR JUIZ DE DIREITO
+DA {vara} DA COMARCA DE {comarca}
+
+{reu}, {qualificacao_reu}, por meio de seu advogado que esta subscreve, vem respeitosamente à presença de Vossa Excelência apresentar
+
+CONTESTAÇÃO
+
+nos autos da ação {tipo_acao} que lhe move {autor}, pelos fatos e fundamentos jurídicos a seguir expostos:
+
+I - DAS PRELIMINARES
+
+{preliminares}
+
+II - DO MÉRITO
+
+{merito}
+
+III - DOS FATOS
+
+{contestacao_fatos}
+
+IV - DO DIREITO
+
+{fundamentacao_juridica}
+
+V - DOS PEDIDOS
+
+Diante do exposto, requer-se:
+
+{pedidos_contestacao}
+
+Protesta pela produção de todas as provas em direito admitidas, especialmente:
+a) Prova documental;
+b) Prova testemunhal;
+c) Depoimento pessoal da parte autora;
+d) Perícia técnica, se necessária.
+
+Termos em que pede deferimento.
+
+{cidade}, {data}.
+
+_________________________
+{advogado_reu}
+OAB/{estado} nº {oab_numero}
+

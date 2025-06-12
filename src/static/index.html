@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API de Geração de Contestação Jurídica</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h2 {
+            color: #34495e;
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="file"], input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .download-links {
+            margin-top: 15px;
+        }
+        .download-links a {
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            padding: 8px 16px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .download-links a:hover {
+            background-color: #218838;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .preview {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏛️ API de Geração de Contestação Jurídica</h1>
+        
+        <div class="section">
+            <h2>📄 1. Upload da Petição Inicial</h2>
+            <p>Faça o upload de um arquivo PDF contendo a petição inicial para análise automática.</p>
+            
+            <div class="form-group">
+                <label for="pdfFile">Selecione o arquivo PDF:</label>
+                <input type="file" id="pdfFile" accept=".pdf">
+            </div>
+            
+            <button onclick="uploadPDF()" id="uploadBtn">Analisar PDF</button>
+            
+            <div class="loading" id="uploadLoading">
+                <div class="spinner"></div>
+                <p>Processando PDF...</p>
+            </div>
+            
+            <div id="uploadResult"></div>
+        </div>
+        
+        <div class="section">
+            <h2>⚖️ 2. Dados do Réu (Opcional)</h2>
+            <p>Personalize a contestação com informações específicas do réu.</p>
+            
+            <div class="form-group">
+                <label for="advogadoReu">Nome do Advogado:</label>
+                <input type="text" id="advogadoReu" placeholder="Ex: Dr. João Silva">
+            </div>
+            
+            <div class="form-group">
+                <label for="oabNumero">Número da OAB:</label>
+                <input type="text" id="oabNumero" placeholder="Ex: 123.456">
+            </div>
+            
+            <div class="form-group">
+                <label for="estado">Estado:</label>
+                <input type="text" id="estado" placeholder="Ex: SP" maxlength="2">
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📝 3. Gerar Contestação</h2>
+            <p>Gere a contestação jurídica baseada na análise do PDF.</p>
+            
+            <button onclick="generateContestacao()" id="generateBtn" disabled>Gerar Contestação</button>
+            
+            <div class="loading" id="generateLoading">
+                <div class="spinner"></div>
+                <p>Gerando contestação...</p>
+            </div>
+            
+            <div id="generateResult"></div>
+        </div>
+    </div>
+
+    <script>
+        let sessionFile = null;
+        const API_BASE = window.location.origin + '/api';
+
+        async function uploadPDF() {
+            const fileInput = document.getElementById('pdfFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showResult('uploadResult', 'Por favor, selecione um arquivo PDF.', 'error');
+                return;
+            }
+            
+            const uploadBtn = document.getElementById('uploadBtn');
+            const loading = document.getElementById('uploadLoading');
+            
+            uploadBtn.disabled = true;
+            loading.style.display = 'block';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(API_BASE + '/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    sessionFile = result.session_file;
+                    document.getElementById('generateBtn').disabled = false;
+                    
+                    let message = `<strong>✅ Arquivo processado com sucesso!</strong><br><br>`;
+                    message += `<strong>Dados extraídos:</strong><br>`;
+                    message += `• Tipo de ação: ${result.dados_extraidos.tipo_acao}<br>`;
+                    message += `• Valor da causa: ${result.dados_extraidos.valor_causa}<br>`;
+                    message += `• Autor: ${result.dados_extraidos.partes?.autor || 'Não identificado'}<br>`;
+                    message += `• Réu: ${result.dados_extraidos.partes?.reu || 'Não identificado'}<br>`;
+                    message += `• Pedidos encontrados: ${result.dados_extraidos.pedidos_count}<br>`;
+                    
+                    if (result.warnings && result.warnings.length > 0) {
+                        message += `<br><strong>⚠️ Avisos:</strong><br>`;
+                        result.warnings.forEach(warning => {
+                            message += `• ${warning}<br>`;
+                        });
+                    }
+                    
+                    showResult('uploadResult', message, 'success');
+                } else {
+                    showResult('uploadResult', `❌ Erro: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('uploadResult', `❌ Erro de conexão: ${error.message}`, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        async function generateContestacao() {
+            if (!sessionFile) {
+                showResult('generateResult', 'Por favor, faça o upload de um PDF primeiro.', 'error');
+                return;
+            }
+            
+            const generateBtn = document.getElementById('generateBtn');
+            const loading = document.getElementById('generateLoading');
+            
+            generateBtn.disabled = true;
+            loading.style.display = 'block';
+            
+            const dadosReu = {
+                advogado_reu: document.getElementById('advogadoReu').value || 'Advogado da Contestante',
+                oab_numero: document.getElementById('oabNumero').value || '000.000',
+                estado: document.getElementById('estado').value || 'SP'
+            };
+            
+            try {
+                const response = await fetch(API_BASE + '/generate-contestacao', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_file: sessionFile,
+                        dados_reu: dadosReu
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    let message = `<strong>✅ Contestação gerada com sucesso!</strong><br><br>`;
+                    message += `<strong>ID da Contestação:</strong> ${result.contestacao_id}<br><br>`;
+                    
+                    message += `<div class="download-links">`;
+                    message += `<a href="${API_BASE}/download/txt/${result.contestacao_id}" target="_blank">📄 Download TXT</a>`;
+                    message += `<a href="${API_BASE}/download/word/${result.contestacao_id}" target="_blank">📝 Download Word</a>`;
+                    message += `<a href="${API_BASE}/download/pdf/${result.contestacao_id}" target="_blank">📋 Download PDF</a>`;
+                    message += `</div>`;
+                    
+                    message += `<br><strong>Preview da Contestação:</strong><br>`;
+                    message += `<div class="preview">${result.preview}</div>`;
+                    
+                    showResult('generateResult', message, 'success');
+                } else {
+                    showResult('generateResult', `❌ Erro: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('generateResult', `❌ Erro de conexão: ${error.message}`, 'error');
+            } finally {
+                generateBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function showResult(elementId, message, type) {
+            const resultDiv = document.getElementById(elementId);
+            resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+
+        // Verificar se a API está funcionando ao carregar a página
+        window.onload = async function() {
+            try {
+                const response = await fetch(API_BASE + '/health');
+                if (response.ok) {
+                    console.log('✅ API está funcionando');
+                } else {
+                    showResult('uploadResult', '⚠️ API não está respondendo corretamente', 'error');
+                }
+            } catch (error) {
+                showResult('uploadResult', '❌ Não foi possível conectar com a API', 'error');
+            }
+        };
+    </script>
+</body>
+</html>
+
