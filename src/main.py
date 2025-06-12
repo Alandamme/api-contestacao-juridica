@@ -10,7 +10,10 @@ from src.routes.user import user_bp
 from src.routes.contestacao import contestacao_bp
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
-app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
+import os
+
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'senha-padrao-para_desenvolvimento')
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Configurar CORS para permitir requisições de qualquer origem
