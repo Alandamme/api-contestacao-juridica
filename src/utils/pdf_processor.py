@@ -49,6 +49,9 @@ class PDFProcessor:
         """
         Usa OpenAI GPT para extrair partes, valor da causa, pedidos, fatos, fundamentos jurídicos do texto da petição.
         """
+        # PRINT PARA DEBUG DA VARIÁVEL DE AMBIENTE
+        print("PDFProcessor: OPENAI_API_KEY:", os.environ.get("OPENAI_API_KEY"))
+
         client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
         prompt = f"""
 Você é um assistente jurídico. Extraia e retorne em JSON, a partir do texto da petição inicial abaixo, os seguintes campos:
