@@ -1,9 +1,10 @@
 import PyPDF2
 import re
-import openai
 import os
 import json
 from typing import Dict, List, Optional
+
+from openai import OpenAI
 
 class PDFProcessor:
     """
@@ -48,7 +49,7 @@ class PDFProcessor:
         """
         Usa OpenAI GPT para extrair partes, valor da causa, pedidos, fatos, fundamentos jurídicos do texto da petição.
         """
-        openai.api_key = os.environ.get("OPENAI_API_KEY")
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
         prompt = f"""
 Você é um assistente jurídico. Extraia e retorne em JSON, a partir do texto da petição inicial abaixo, os seguintes campos:
 
@@ -67,7 +68,7 @@ Texto da petição inicial:
 
 Retorne **somente** o JSON com esses campos, não explique nada.
 """
-        resposta = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": "Você é um assistente jurídico extrator de dados."},
@@ -77,7 +78,7 @@ Retorne **somente** o JSON com esses campos, não explique nada.
             temperature=0.0
         )
 
-        resposta_texto = resposta['choices'][0]['message']['content']
+        resposta_texto = response.choices[0].message.content
         try:
             dados = json.loads(resposta_texto)
         except Exception:
