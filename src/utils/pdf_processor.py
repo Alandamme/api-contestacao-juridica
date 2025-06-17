@@ -56,4 +56,32 @@ Você é um assistente jurídico. Extraia e retorne em JSON, a partir do texto d
 - reu: nome completo, qualificação e endereço do réu
 - tipo_acao: tipo da ação (ex: indenização, cobrança)
 - valor_causa: valor total da causa
-- fat
+- fatos: resumo dos fatos relevantes do caso
+- pedidos: lista dos principais pedidos feitos pelo autor
+- fundamentos_juridicos: lista de artigos de lei, CDC, jurisprudências e fundamentos invocados
+
+Texto da petição inicial:
+\"\"\"
+{text}
+\"\"\"
+
+Retorne **somente** o JSON com esses campos, não explique nada.
+"""
+        resposta = openai.ChatCompletion.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "Você é um assistente jurídico extrator de dados."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1500,
+            temperature=0.0
+        )
+
+        resposta_texto = resposta['choices'][0]['message']['content']
+        try:
+            dados = json.loads(resposta_texto)
+        except Exception:
+            # Se não vier JSON válido, tente limpar manualmente
+            resposta_texto = resposta_texto[resposta_texto.find("{"):resposta_texto.rfind("}")+1]
+            dados = json.loads(resposta_texto)
+        return dados
