@@ -98,6 +98,100 @@ class PDFProcessor:
             pedidos_text = pedidos_section.group(0)
             # Extrai linhas com bullet, travessão, letra, número, etc.
             items = re.findall(r'(?:[\-\–•*]|\d+\)|[a-z]\)|[0-9]+\.)\s*([^\n]+)', pedidos_text)
-            # Se nada
+            # Se nada achar, pega frases terminando com ponto e vírgula
+            if not items:
+                items = re.findall(r'([^.]+;)', pedidos_text)
+            requests.extend([i.strip() for i in items if i.strip()])
+        return requests
 
+    def _extract_facts(self, text: str) -> str:
+        """
+        Extrai a narrativa dos fatos
+        """
+        fatos_patterns = [
+            r'(?:DOS FATOS|FATOS|NARRATIVA)[\s\S]*?(?=\n[A-Z]{2,})',
+            r'(?:HISTÓRICO|RELATO)[\s\S]*?(?=\n[A-Z]{2,})'
+        ]
 
+        for pattern in fatos_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                return match.group(0).strip()
+
+        return ""
+
+    def _extract_legal_grounds(self, text: str) -> List[str]:
+        """
+        Extrai os fundamentos jurídicos citados
+        """
+        legal_grounds = []
+
+        law_patterns = [
+            r'(?:Lei|Código|Decreto|Portaria)\s+n?º?\s*[\d\./]+',
+            r'(?:Art|Artigo)\.?\s*\d+',
+            r'(?:CF|Constituição Federal)',
+            r'(?:CDC|Código de Defesa do Consumidor)',
+            r'(?:CPC|Código de Processo Civil)'
+        ]
+
+        for pattern in law_patterns:
+            matches = re.findall(pattern, text, re.IGNORECASE)
+            legal_grounds.extend(matches)
+
+        return list(set(legal_grounds))  # Remove duplicatas
+
+    def _extract_case_value(self, text: str) -> Optional[str]:
+        """
+        Extrai o valor da causa
+        """
+        value_patterns = [
+            r'(?:valor da causa|valor atribuído)[\s:]+R\$\s*([\d.,]+)',
+            r'R\$\s*([\d.,]+)'
+        ]
+
+        for pattern in value_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                return match.group(1)
+
+        return None
+
+    def _identify_action_type(self, text: str) -> str:
+        """
+        Identifica o tipo de ação com base no conteúdo
+        """
+        action_types = {
+            'indenização': ['indenização', 'danos morais', 'danos materiais'],
+            'cobrança': ['cobrança', 'débito', 'pagamento'],
+            'rescisão': ['rescisão', 'resolução contratual'],
+            'revisional': ['revisão', 'revisional', 'redução'],
+            'consignação': ['consignação', 'depósito']
+        }
+
+        text_lower = text.lower()
+
+        for action_type, keywords in action_types.items():
+            if any(keyword in text_lower for keyword in keywords):
+                return action_type
+
+        return 'não identificado'
+
+    def process_pdf(self, file_path: str) -> Dict:
+        """
+        Processa completamente um PDF de petição inicial
+        """
+        try:
+            # Extrair texto
+            text = self.extract_text_from_pdf(file_path)
+
+            # Analisar conteúdo
+            analysis = self.analyze_legal_content(text)
+
+            # Adicionar texto completo para referência
+            analysis['texto_completo'] = text
+
+            self.extracted_data = analysis
+            return analysis
+
+        except Exception as e:
+            raise Exception(f"Erro no processamento do PDF: {str(e)}")
