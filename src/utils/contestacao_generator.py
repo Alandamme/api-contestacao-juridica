@@ -58,4 +58,3 @@ DADOS DO RÉU (opcionais):
 
         contestacao_text = resposta['choices'][0]['message']['content']
         return contestacao_text
-
