@@ -15,6 +15,10 @@ class ContestacaoGenerator:
             '..', '..', 'static', 'modelos', 'contestacao_padrao.txt'
         )
         modelo_path = os.path.abspath(modelo_path)
+        
+        # DEBUG: Mostra caminho do arquivo e se existe
+        print("DEBUG: Caminho do modelo:", modelo_path)
+        print("DEBUG: Arquivo existe?", os.path.exists(modelo_path))
 
         with open(modelo_path, 'r', encoding='utf-8') as f:
             modelo = f.read()
