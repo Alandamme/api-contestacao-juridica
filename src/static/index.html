@@ -7,38 +7,86 @@
         body { font-family: Arial, sans-serif; margin: 40px; background: #f9f9f9; }
         .container { background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 0 15px #ddd; max-width: 700px; margin: 0 auto; }
         .preview { background: #f5f5f5; border: 1px solid #e3e3e3; padding: 10px; border-radius: 4px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; }
+        .section { margin-bottom: 32px; }
+        input[type="text"] { width: 100%; padding: 6px; margin-bottom: 12px; border-radius: 4px; border: 1px solid #ccc; }
+        button { padding: 12px 28px; background: #0066cc; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;}
+        button:disabled { background: #aaa; cursor: not-allowed; }
+        ul { margin-top: 0; }
+        .download-links a {
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            padding: 8px 16px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .download-links a:hover { background: #218838; }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>🏛️ API de Geração de Contestação Jurídica</h1>
-    <input type="file" id="pdfFile" accept=".pdf">
-    <button onclick="uploadPDF()">Analisar PDF</button>
-    <div id="uploadResult"></div>
+    <div class="section">
+        <h2>1. Upload da Petição Inicial</h2>
+        <input type="file" id="pdfFile" accept=".pdf">
+        <button onclick="uploadPDF()" id="uploadBtn">Analisar PDF</button>
+        <div id="uploadResult"></div>
+    </div>
+    <div class="section">
+        <h2>2. Dados do Réu (Opcional)</h2>
+        <label>Nome do Advogado:</label>
+        <input type="text" id="advogadoReu" placeholder="Ex: Dr. João Silva">
+        <label>Número da OAB:</label>
+        <input type="text" id="oabNumero" placeholder="Ex: 123.456">
+        <label>Estado:</label>
+        <input type="text" id="estado" placeholder="Ex: SP" maxlength="2">
+    </div>
+    <div class="section">
+        <h2>3. Gerar Contestação</h2>
+        <button onclick="generateContestacao()" id="generateBtn" disabled>Gerar Contestação</button>
+        <div id="generateResult"></div>
+    </div>
 </div>
 
 <script>
+let sessionFile = null;
+const API_BASE = '/api'; // Use o caminho relativo para compatibilidade no Render
+
 async function uploadPDF() {
     const fileInput = document.getElementById('pdfFile');
     const file = fileInput.files[0];
     if (!file) {
-        showResult('Por favor, selecione um arquivo PDF.');
+        showResult('uploadResult', 'Por favor, selecione um arquivo PDF.');
         return;
     }
-    const formData = new FormData();
-    formData.append('file', file);
+    document.getElementById('uploadBtn').disabled = true;
+    showResult('uploadResult', 'Processando PDF... Aguarde.');
     try {
-        const response = await fetch('/api/upload', {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(API_BASE + '/upload', {
             method: 'POST',
             body: formData
         });
         const result = await response.json();
+        if (!response.ok) {
+            showResult('uploadResult', result.error || 'Erro ao processar PDF.');
+            document.getElementById('uploadBtn').disabled = false;
+            return;
+        }
+
+        sessionFile = result.session_file;
+        document.getElementById('generateBtn').disabled = false;
+
         let dados = result.dados_extraidos;
         let message = '';
         message += `• <b>Tipo de ação:</b> ${dados.tipo_acao || 'Não identificado'}<br>`;
         message += `• <b>Valor da causa:</b> ${dados.valor_causa || 'Não identificado'}<br>`;
-        message += `• <b>Autor:</b> ${dados.autor || 'Não identificado'}<br>`;
-        message += `• <b>Réu:</b> ${dados.reu || 'Não identificado'}<br>`;
+        message += `• <b>Autor:</b> ${dados.autor || (dados.partes && dados.partes.autor) || 'Não identificado'}<br>`;
+        message += `• <b>Réu:</b> ${dados.reu || (dados.partes && dados.partes.reu) || 'Não identificado'}<br>`;
 
         if (dados.fatos) {
             message += `<br><b>Resumo dos Fatos:</b><br><div class='preview'>${dados.fatos}</div>`;
@@ -53,14 +101,66 @@ async function uploadPDF() {
             dados.fundamentos_juridicos.forEach(f => message += `<li>${f}</li>`);
             message += `</ul>`;
         }
-        showResult(message);
+
+        // Avisos do backend
+        if (result.warnings && result.warnings.length > 0) {
+            message += `<br><b>Avisos:</b><ul>`;
+            result.warnings.forEach(w => message += `<li>${w}</li>`);
+            message += `</ul>`;
+        }
+
+        showResult('uploadResult', message);
     } catch (error) {
-        showResult('Erro ao processar o PDF: ' + error);
+        showResult('uploadResult', 'Erro ao processar o PDF: ' + error.message);
+    } finally {
+        document.getElementById('uploadBtn').disabled = false;
     }
 }
 
-function showResult(msg) {
-    document.getElementById('uploadResult').innerHTML = '<div class="preview">' + msg + '</div>';
+async function generateContestacao() {
+    if (!sessionFile) {
+        showResult('generateResult', 'Por favor, faça o upload de um PDF primeiro.');
+        return;
+    }
+    document.getElementById('generateBtn').disabled = true;
+    showResult('generateResult', 'Gerando contestação... Aguarde.');
+    const dadosReu = {
+        advogado_reu: document.getElementById('advogadoReu').value || 'Advogado da Contestante',
+        oab_numero: document.getElementById('oabNumero').value || '000.000',
+        estado: document.getElementById('estado').value || 'SP'
+    };
+    try {
+        const response = await fetch(API_BASE + '/generate-contestacao', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                session_file: sessionFile,
+                dados_reu: dadosReu
+            })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            showResult('generateResult', result.error || 'Erro ao gerar contestação.');
+            document.getElementById('generateBtn').disabled = false;
+            return;
+        }
+        let message = `<b>✅ Contestação gerada com sucesso!</b><br>`;
+        message += `<div class="download-links">`;
+        message += `<a href="${API_BASE}/download/txt/${result.contestacao_id}" target="_blank">📄 Download TXT</a>`;
+        message += `<a href="${API_BASE}/download/word/${result.contestacao_id}" target="_blank">📝 Download Word</a>`;
+        message += `<a href="${API_BASE}/download/pdf/${result.contestacao_id}" target="_blank">📋 Download PDF</a>`;
+        message += `</div>`;
+        message += `<br><b>Preview da Contestação:</b><div class="preview">${result.preview}</div>`;
+        showResult('generateResult', message);
+    } catch (error) {
+        showResult('generateResult', 'Erro ao gerar a contestação: ' + error.message);
+    } finally {
+        document.getElementById('generateBtn').disabled = false;
+    }
+}
+
+function showResult(elementId, msg) {
+    document.getElementById(elementId).innerHTML = '<div class="preview">' + msg + '</div>';
 }
 </script>
 </body>
