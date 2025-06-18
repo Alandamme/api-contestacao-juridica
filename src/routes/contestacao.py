@@ -16,12 +16,12 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Health check/teste
-@contestacao_bp.route('/api/contestacao/teste', methods=['GET'])
+@contestacao_bp.route('/teste', methods=['GET'])
 def teste():
     return jsonify({"status": "Contestacao blueprint funcionando!"})
 
 # 1. Upload de petição inicial em PDF
-@contestacao_bp.route('/api/upload', methods=['POST'])
+@contestacao_bp.route('/upload', methods=['POST'])
 def upload_pdf():
     if 'file' not in request.files:
         return jsonify({'error': 'Nenhum arquivo foi enviado'}), 400
@@ -79,7 +79,7 @@ def upload_pdf():
     return jsonify({'error': 'Tipo de arquivo não permitido. Apenas PDFs são aceitos.'}), 400
 
 # 2. Gerar contestação
-@contestacao_bp.route('/api/generate-contestacao', methods=['POST'])
+@contestacao_bp.route('/generate-contestacao', methods=['POST'])
 def generate_contestacao():
     try:
         data = request.get_json()
@@ -134,7 +134,7 @@ def generate_contestacao():
         return jsonify({'error': f'Erro na geração da contestação: {str(e)}'}), 500
 
 # 3. Download dos arquivos
-@contestacao_bp.route('/api/download/<file_type>/<contestacao_id>', methods=['GET'])
+@contestacao_bp.route('/download/<file_type>/<contestacao_id>', methods=['GET'])
 def download_contestacao(file_type, contestacao_id):
     try:
         if file_type not in ['txt', 'word', 'pdf']:
@@ -166,7 +166,7 @@ def download_contestacao(file_type, contestacao_id):
         return jsonify({'error': f'Erro no download: {str(e)}'}), 500
 
 # 4. Health check da API
-@contestacao_bp.route('/api/health', methods=['GET'])
+@contestacao_bp.route('/health', methods=['GET'])
 def health_check():
     return jsonify({
         'status': 'API funcionando corretamente',
