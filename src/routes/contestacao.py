@@ -164,9 +164,10 @@ def download_contestacao(file_type, contestacao_id):
 
     except Exception as e:
         return jsonify({'error': f'Erro no download: {str(e)}'}), 500
+
+# Debug: Listar arquivos do diretório do modelo
 @contestacao_bp.route('/debug/lista-arquivos', methods=['GET'])
 def debug_lista_arquivos():
-    import os
     caminho = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'static', 'modelos'))
     arquivos = []
     if os.path.exists(caminho):
@@ -183,14 +184,3 @@ def health_check():
         'status': 'API funcionando corretamente',
         'version': '1.0.0'
     }), 200
-@contestacao_bp.route('/debug/lista-arquivos', methods=['GET'])
-def debug_lista_arquivos():
-    import os
-    caminho = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'static', 'modelos'))
-    arquivos = []
-    if os.path.exists(caminho):
-        arquivos = os.listdir(caminho)
-    return jsonify({
-        "caminho": caminho,
-        "arquivos": arquivos
-    })
