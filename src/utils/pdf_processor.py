@@ -49,27 +49,33 @@ class PDFProcessor:
         """
         Usa OpenAI GPT para extrair partes, valor da causa, pedidos, fatos, fundamentos jurídicos do texto da petição.
         """
-        # PRINT PARA DEBUG DA VARIÁVEL DE AMBIENTE
-        print("PDFProcessor: OPENAI_API_KEY:", os.environ.get("OPENAI_API_KEY"))
-
         client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
         prompt = f"""
-Você é um assistente jurídico. Extraia e retorne em JSON, a partir do texto da petição inicial abaixo, os seguintes campos:
+Você é um assistente jurídico especializado em leitura de petições iniciais brasileiras.
 
-- autor: nome completo, qualificação e endereço do autor
-- reu: nome completo, qualificação e endereço do réu
-- tipo_acao: tipo da ação (ex: indenização, cobrança)
-- valor_causa: valor total da causa
-- fatos: resumo dos fatos relevantes do caso
-- pedidos: lista dos principais pedidos feitos pelo autor
-- fundamentos_juridicos: lista de artigos de lei, CDC, jurisprudências e fundamentos invocados
+Seu objetivo é retornar **apenas um JSON** preenchendo o máximo de dados possíveis, mesmo que alguns estejam incompletos.
+
+**Campos obrigatórios:**
+- "autor": Tente extrair o nome completo do autor, buscando padrões como "vem propor a presente", "em face de", "AUTOR", "REQUERENTE" ou similares e pegue o nome ou a parte seguinte, mesmo que não tenha tudo (RG, CPF, profissão, endereço);
+- "reu": Tente extrair o nome completo do réu, buscando padrões como "em face de", "RÉU", "REQUERIDO" ou similares e pegue o nome ou a razão social, mesmo se faltar endereço ou CNPJ;
+- "tipo_acao": tipo da ação, por extenso (ex: "ação de indenização por danos materiais e morais")
+- "valor_causa": valor total da causa, apenas o número
+- "fatos": resumo dos fatos principais, bem objetivo
+- "pedidos": lista (array) dos principais pedidos feitos pelo autor
+- "fundamentos_juridicos": lista de artigos de lei, CDC, jurisprudências e fundamentos invocados
+
+IMPORTANTE:
+- Sempre preencha o campo com o texto mais próximo do PDF, mesmo se não estiver completo.
+- Não retorne "não identificado", nem "[não encontrado]", preencha com o que for possível.
+- Se um campo não existir, deixe-o como string vazia ou lista vazia, mas nunca com o texto "não identificado".
+- NÃO inclua explicação, só o JSON.
 
 Texto da petição inicial:
 \"\"\"
 {text}
 \"\"\"
 
-Retorne **somente** o JSON com esses campos, não explique nada.
+Responda SOMENTE com o JSON solicitado acima, sem explicações, sem texto fora do JSON.
 """
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -77,7 +83,7 @@ Retorne **somente** o JSON com esses campos, não explique nada.
                 {"role": "system", "content": "Você é um assistente jurídico extrator de dados."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=1500,
+            max_tokens=2000,
             temperature=0.0
         )
 
