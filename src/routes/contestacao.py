@@ -4,7 +4,6 @@ import os
 import tempfile
 import json
 
-# Importe suas classes utilitárias
 from src.utils.pdf_processor import PDFProcessor
 from src.utils.contestacao_generator import ContestacaoGenerator
 from src.utils.document_generator import DocumentGenerator
@@ -16,7 +15,7 @@ ALLOWED_EXTENSIONS = {'pdf'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Rota de saúde/teste
+# Health check/teste
 @contestacao_bp.route('/api/contestacao/teste', methods=['GET'])
 def teste():
     return jsonify({"status": "Contestacao blueprint funcionando!"})
@@ -173,4 +172,3 @@ def health_check():
         'status': 'API funcionando corretamente',
         'version': '1.0.0'
     }), 200
-
