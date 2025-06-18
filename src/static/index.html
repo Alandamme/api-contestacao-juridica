@@ -3,165 +3,241 @@
 <head>
     <meta charset="UTF-8">
     <title>API de Geração de Contestação Jurídica</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f9f9f9; }
-        .container { background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 0 15px #ddd; max-width: 700px; margin: 0 auto; }
-        .preview { background: #f5f5f5; border: 1px solid #e3e3e3; padding: 10px; border-radius: 4px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; }
-        .section { margin-bottom: 32px; }
-        input[type="text"] { width: 100%; padding: 6px; margin-bottom: 12px; border-radius: 4px; border: 1px solid #ccc; }
-        button { padding: 12px 28px; background: #0066cc; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;}
-        button:disabled { background: #aaa; cursor: not-allowed; }
-        ul { margin-top: 0; }
-        .download-links a {
-            display: inline-block;
-            margin-right: 10px;
-            margin-bottom: 10px;
-            padding: 8px 16px;
-            background-color: #28a745;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
+        body { font-family: Arial, sans-serif; background: #f9f9f9; margin: 0; padding: 0; }
+        .container { max-width: 750px; margin: 40px auto; background: #fff; border-radius: 10px; box-shadow: 0 0 18px #d3d3d3; padding: 32px 30px 30px 30px; }
+        h1 { text-align: center; color: #274690; margin-bottom: 35px; }
+        .section { margin-bottom: 34px; }
+        label { display: block; margin-bottom: 7px; font-weight: bold; }
+        input[type="file"], input[type="text"] {
+            padding: 9px; border-radius: 4px; border: 1px solid #ddd; width: 100%; margin-bottom: 8px;
         }
-        .download-links a:hover { background: #218838; }
+        button {
+            padding: 12px 26px; border: none; border-radius: 4px; background: #274690; color: #fff;
+            font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 8px;
+            transition: background 0.15s;
+        }
+        button:disabled { background: #cccccc; cursor: not-allowed; }
+        button:hover:not(:disabled) { background: #1e3567; }
+        .result { margin-top: 20px; padding: 16px; border-radius: 6px; }
+        .success { background: #eafbea; color: #217344; border: 1px solid #baf2c6; }
+        .error { background: #ffe6e6; color: #a33; border: 1px solid #ffc2c2; }
+        .info { background: #e9f2fb; color: #275377; border: 1px solid #b8dbfa; }
+        .preview {
+            background: #f6f7fa; border: 1px solid #e4e8ef; padding: 13px 10px;
+            border-radius: 6px; margin: 10px 0 8px 0; font-family: monospace; white-space: pre-wrap;
+            max-height: 350px; overflow-y: auto;
+        }
+        .loading { display: none; text-align: center; margin: 20px 0; }
+        .spinner {
+            border: 4px solid #f3f3f3; border-top: 4px solid #274690; border-radius: 50%;
+            width: 38px; height: 38px; animation: spin 2s linear infinite; margin: 0 auto 8px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .download-links { margin: 18px 0 10px 0; }
+        .download-links a {
+            display: inline-block; margin-right: 9px; margin-bottom: 6px; padding: 8px 15px;
+            background: #3db36b; color: #fff; text-decoration: none; border-radius: 4px;
+            font-size: 15px;
+        }
+        .download-links a:hover { background: #217344; }
+        .form-group { margin-bottom: 13px; }
+        ul { margin: 6px 0 8px 18px; }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>🏛️ API de Geração de Contestação Jurídica</h1>
+
+    <!-- 1. Upload da Petição Inicial -->
     <div class="section">
-        <h2>1. Upload da Petição Inicial</h2>
+        <h2>📄 1. Upload da Petição Inicial</h2>
+        <label for="pdfFile">Selecione o arquivo PDF da petição inicial:</label>
         <input type="file" id="pdfFile" accept=".pdf">
         <button onclick="uploadPDF()" id="uploadBtn">Analisar PDF</button>
+        <div class="loading" id="uploadLoading">
+            <div class="spinner"></div>
+            <p>Analisando PDF...</p>
+        </div>
         <div id="uploadResult"></div>
     </div>
+
+    <!-- 2. Dados do Réu -->
     <div class="section">
-        <h2>2. Dados do Réu (Opcional)</h2>
-        <label>Nome do Advogado:</label>
-        <input type="text" id="advogadoReu" placeholder="Ex: Dr. João Silva">
-        <label>Número da OAB:</label>
-        <input type="text" id="oabNumero" placeholder="Ex: 123.456">
-        <label>Estado:</label>
-        <input type="text" id="estado" placeholder="Ex: SP" maxlength="2">
+        <h2>⚖️ 2. Dados do Réu (Opcional)</h2>
+        <div class="form-group">
+            <label for="advogadoReu">Nome do Advogado:</label>
+            <input type="text" id="advogadoReu" placeholder="Ex: Dr. João Silva">
+        </div>
+        <div class="form-group">
+            <label for="oabNumero">Número da OAB:</label>
+            <input type="text" id="oabNumero" placeholder="Ex: 123.456">
+        </div>
+        <div class="form-group">
+            <label for="estado">Estado (UF):</label>
+            <input type="text" id="estado" placeholder="Ex: SP" maxlength="2">
+        </div>
     </div>
+
+    <!-- 3. Gerar Contestação -->
     <div class="section">
-        <h2>3. Gerar Contestação</h2>
+        <h2>📝 3. Gerar Contestação</h2>
         <button onclick="generateContestacao()" id="generateBtn" disabled>Gerar Contestação</button>
+        <div class="loading" id="generateLoading">
+            <div class="spinner"></div>
+            <p>Gerando contestação...</p>
+        </div>
         <div id="generateResult"></div>
     </div>
 </div>
 
 <script>
-let sessionFile = null;
-const API_BASE = '/api'; // Use o caminho relativo para compatibilidade no Render
+    let sessionFile = null;
+    const API_BASE = window.location.origin + '/api';
 
-async function uploadPDF() {
-    const fileInput = document.getElementById('pdfFile');
-    const file = fileInput.files[0];
-    if (!file) {
-        showResult('uploadResult', 'Por favor, selecione um arquivo PDF.');
-        return;
+    function renderParte(parte) {
+        if (!parte) return 'Não identificado';
+        if (typeof parte === 'string') return parte;
+        let res = '';
+        if (parte.nome) res += `<b>Nome:</b> ${parte.nome}<br>`;
+        if (parte.qualificacao) res += `<b>Qualificação:</b> ${parte.qualificacao}<br>`;
+        if (parte.endereco) res += `<b>Endereço:</b> ${parte.endereco}<br>`;
+        return res || 'Não identificado';
     }
-    document.getElementById('uploadBtn').disabled = true;
-    showResult('uploadResult', 'Processando PDF... Aguarde.');
-    try {
+
+    async function uploadPDF() {
+        const fileInput = document.getElementById('pdfFile');
+        const file = fileInput.files[0];
+        if (!file) {
+            showResult('uploadResult', 'Por favor, selecione um arquivo PDF.', 'error');
+            return;
+        }
+        const uploadBtn = document.getElementById('uploadBtn');
+        const loading = document.getElementById('uploadLoading');
+        uploadBtn.disabled = true;
+        loading.style.display = 'block';
+
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(API_BASE + '/upload', {
-            method: 'POST',
-            body: formData
-        });
-        const result = await response.json();
-        if (!response.ok) {
-            showResult('uploadResult', result.error || 'Erro ao processar PDF.');
-            document.getElementById('uploadBtn').disabled = false;
+        try {
+            const response = await fetch(API_BASE + '/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                sessionFile = result.session_file;
+                document.getElementById('generateBtn').disabled = false;
+
+                let dados = result.dados_extraidos;
+                let message = `<strong>✅ Arquivo processado com sucesso!</strong><br><br>`;
+                message += `<b>Tipo de ação:</b> ${dados.tipo_acao || 'Não identificado'}<br>`;
+                message += `<b>Valor da causa:</b> ${dados.valor_causa || 'Não identificado'}<br>`;
+                message += `<b>Autor:</b><br>${renderParte(dados.autor)}<br>`;
+                message += `<b>Réu:</b><br>${renderParte(dados.reu)}<br>`;
+
+                if (dados.fatos) {
+                    message += `<br><b>Resumo dos Fatos:</b><div class='preview'>${dados.fatos}</div>`;
+                }
+                if (dados.pedidos && dados.pedidos.length > 0) {
+                    message += `<br><b>Pedidos do Autor:</b><ul>`;
+                    dados.pedidos.forEach(p => message += `<li>${p}</li>`);
+                    message += `</ul>`;
+                }
+                if (dados.fundamentos_juridicos && dados.fundamentos_juridicos.length > 0) {
+                    message += `<br><b>Fundamentos Jurídicos:</b><ul>`;
+                    dados.fundamentos_juridicos.forEach(f => message += `<li>${f}</li>`);
+                    message += `</ul>`;
+                }
+                if (result.warnings && result.warnings.length > 0) {
+                    message += `<br><strong>⚠️ Avisos:</strong><br>`;
+                    result.warnings.forEach(warning => {
+                        message += `• ${warning}<br>`;
+                    });
+                }
+                showResult('uploadResult', message, 'success');
+            } else {
+                showResult('uploadResult', `❌ Erro: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            showResult('uploadResult', `❌ Erro de conexão: ${error.message}`, 'error');
+        } finally {
+            uploadBtn.disabled = false;
+            loading.style.display = 'none';
+        }
+    }
+
+    async function generateContestacao() {
+        if (!sessionFile) {
+            showResult('generateResult', 'Por favor, faça o upload de um PDF primeiro.', 'error');
             return;
         }
+        const generateBtn = document.getElementById('generateBtn');
+        const loading = document.getElementById('generateLoading');
+        generateBtn.disabled = true;
+        loading.style.display = 'block';
 
-        sessionFile = result.session_file;
-        document.getElementById('generateBtn').disabled = false;
+        const dadosReu = {
+            advogado_reu: document.getElementById('advogadoReu').value || 'Advogado da Contestante',
+            oab_numero: document.getElementById('oabNumero').value || '000.000',
+            estado: document.getElementById('estado').value || 'SP'
+        };
 
-        let dados = result.dados_extraidos;
-        let message = '';
-        message += `• <b>Tipo de ação:</b> ${dados.tipo_acao || 'Não identificado'}<br>`;
-        message += `• <b>Valor da causa:</b> ${dados.valor_causa || 'Não identificado'}<br>`;
-        message += `• <b>Autor:</b> ${dados.autor || (dados.partes && dados.partes.autor) || 'Não identificado'}<br>`;
-        message += `• <b>Réu:</b> ${dados.reu || (dados.partes && dados.partes.reu) || 'Não identificado'}<br>`;
+        try {
+            const response = await fetch(API_BASE + '/generate-contestacao', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    session_file: sessionFile,
+                    dados_reu: dadosReu
+                })
+            });
 
-        if (dados.fatos) {
-            message += `<br><b>Resumo dos Fatos:</b><br><div class='preview'>${dados.fatos}</div>`;
+            const result = await response.json();
+            if (response.ok) {
+                let message = `<strong>✅ Contestação gerada com sucesso!</strong><br><br>`;
+                message += `<strong>ID da Contestação:</strong> ${result.contestacao_id}<br>`;
+                message += `<div class="download-links">`;
+                message += `<a href="${API_BASE}/download/txt/${result.contestacao_id}" target="_blank">📄 Baixar TXT</a>`;
+                message += `<a href="${API_BASE}/download/word/${result.contestacao_id}" target="_blank">📝 Baixar Word</a>`;
+                message += `<a href="${API_BASE}/download/pdf/${result.contestacao_id}" target="_blank">📋 Baixar PDF</a>`;
+                message += `</div>`;
+                message += `<br><strong>Preview da Contestação:</strong><div class="preview">${result.preview}</div>`;
+                showResult('generateResult', message, 'success');
+            } else {
+                showResult('generateResult', `❌ Erro: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            showResult('generateResult', `❌ Erro de conexão: ${error.message}`, 'error');
+        } finally {
+            generateBtn.disabled = false;
+            loading.style.display = 'none';
         }
-        if (dados.pedidos && dados.pedidos.length > 0) {
-            message += `<br><b>Pedidos do Autor:</b><ul>`;
-            dados.pedidos.forEach(p => message += `<li>${p}</li>`);
-            message += `</ul>`;
-        }
-        if (dados.fundamentos_juridicos && dados.fundamentos_juridicos.length > 0) {
-            message += `<br><b>Fundamentos Jurídicos:</b><ul>`;
-            dados.fundamentos_juridicos.forEach(f => message += `<li>${f}</li>`);
-            message += `</ul>`;
-        }
-
-        // Avisos do backend
-        if (result.warnings && result.warnings.length > 0) {
-            message += `<br><b>Avisos:</b><ul>`;
-            result.warnings.forEach(w => message += `<li>${w}</li>`);
-            message += `</ul>`;
-        }
-
-        showResult('uploadResult', message);
-    } catch (error) {
-        showResult('uploadResult', 'Erro ao processar o PDF: ' + error.message);
-    } finally {
-        document.getElementById('uploadBtn').disabled = false;
     }
-}
 
-async function generateContestacao() {
-    if (!sessionFile) {
-        showResult('generateResult', 'Por favor, faça o upload de um PDF primeiro.');
-        return;
+    function showResult(elementId, message, type) {
+        const resultDiv = document.getElementById(elementId);
+        resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
     }
-    document.getElementById('generateBtn').disabled = true;
-    showResult('generateResult', 'Gerando contestação... Aguarde.');
-    const dadosReu = {
-        advogado_reu: document.getElementById('advogadoReu').value || 'Advogado da Contestante',
-        oab_numero: document.getElementById('oabNumero').value || '000.000',
-        estado: document.getElementById('estado').value || 'SP'
+
+    // Health check automático ao carregar
+    window.onload = async function() {
+        try {
+            const response = await fetch(API_BASE + '/health');
+            if (response.ok) {
+                // ok!
+            } else {
+                showResult('uploadResult', '⚠️ API não está respondendo corretamente', 'error');
+            }
+        } catch (error) {
+            showResult('uploadResult', '❌ Não foi possível conectar com a API', 'error');
+        }
     };
-    try {
-        const response = await fetch(API_BASE + '/generate-contestacao', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                session_file: sessionFile,
-                dados_reu: dadosReu
-            })
-        });
-        const result = await response.json();
-        if (!response.ok) {
-            showResult('generateResult', result.error || 'Erro ao gerar contestação.');
-            document.getElementById('generateBtn').disabled = false;
-            return;
-        }
-        let message = `<b>✅ Contestação gerada com sucesso!</b><br>`;
-        message += `<div class="download-links">`;
-        message += `<a href="${API_BASE}/download/txt/${result.contestacao_id}" target="_blank">📄 Download TXT</a>`;
-        message += `<a href="${API_BASE}/download/word/${result.contestacao_id}" target="_blank">📝 Download Word</a>`;
-        message += `<a href="${API_BASE}/download/pdf/${result.contestacao_id}" target="_blank">📋 Download PDF</a>`;
-        message += `</div>`;
-        message += `<br><b>Preview da Contestação:</b><div class="preview">${result.preview}</div>`;
-        showResult('generateResult', message);
-    } catch (error) {
-        showResult('generateResult', 'Erro ao gerar a contestação: ' + error.message);
-    } finally {
-        document.getElementById('generateBtn').disabled = false;
-    }
-}
-
-function showResult(elementId, msg) {
-    document.getElementById(elementId).innerHTML = '<div class="preview">' + msg + '</div>';
-}
 </script>
 </body>
 </html>
