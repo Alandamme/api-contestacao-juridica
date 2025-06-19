@@ -189,16 +189,16 @@
         };
 
         try {
-            cconst response = await fetch(API_BASE + '/gerar-contestacao-ia', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-        session_file: sessionFile,
-        dados_reu: dadosReu
-    })
-});
+            const response = await fetch(API_BASE + '/generate-contestacao', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    session_file: sessionFile,
+                    dados_reu: dadosReu
+                })
+            });
 
             const result = await response.json();
             if (response.ok) {
