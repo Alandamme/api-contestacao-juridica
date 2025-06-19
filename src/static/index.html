@@ -10,7 +10,7 @@
         h1 { text-align: center; color: #274690; margin-bottom: 35px; }
         .section { margin-bottom: 34px; }
         label { display: block; margin-bottom: 7px; font-weight: bold; }
-        input[type="file"], input[type="text"] {
+        input[type="file"], input[type="text"], select {
             padding: 9px; border-radius: 4px; border: 1px solid #ddd; width: 100%; margin-bottom: 8px;
         }
         button {
@@ -50,7 +50,6 @@
 <div class="container">
     <h1>🏛️ API de Geração de Contestação Jurídica</h1>
 
-    <!-- 1. Upload da Petição Inicial -->
     <div class="section">
         <h2>📄 1. Upload da Petição Inicial</h2>
         <label for="pdfFile">Selecione o arquivo PDF da petição inicial:</label>
@@ -63,7 +62,6 @@
         <div id="uploadResult"></div>
     </div>
 
-    <!-- 2. Dados do Réu -->
     <div class="section">
         <h2>⚖️ 2. Dados do Réu (Opcional)</h2>
         <div class="form-group">
@@ -80,9 +78,16 @@
         </div>
     </div>
 
-    <!-- 3. Gerar Contestação -->
     <div class="section">
         <h2>📝 3. Gerar Contestação</h2>
+        <div class="form-group">
+            <label for="tipoGeracao">Tipo de Geração:</label>
+            <select id="tipoGeracao">
+                <option value="normal">Modelo Padrão (sem IA)</option>
+                <option value="modelo-ia">Modelo com IA</option>
+                <option value="ia-avancada">IA Avançada (com placeholders)</option>
+            </select>
+        </div>
         <button onclick="generateContestacao()" id="generateBtn" disabled>Gerar Contestação</button>
         <div class="loading" id="generateLoading">
             <div class="spinner"></div>
@@ -139,26 +144,21 @@
                 message += `<b>Autor:</b><br>${renderParte(dados.autor)}<br>`;
                 message += `<b>Réu:</b><br>${renderParte(dados.reu)}<br>`;
 
-                if (dados.fatos) {
-                    message += `<br><b>Resumo dos Fatos:</b><div class='preview'>${dados.fatos}</div>`;
-                }
-                if (dados.pedidos && dados.pedidos.length > 0) {
+                if (dados.fatos) message += `<br><b>Resumo dos Fatos:</b><div class='preview'>${dados.fatos}</div>`;
+                if (dados.pedidos?.length) {
                     message += `<br><b>Pedidos do Autor:</b><ul>`;
                     dados.pedidos.forEach(p => message += `<li>${p}</li>`);
                     message += `</ul>`;
                 }
-                if (dados.fundamentos_juridicos && dados.fundamentos_juridicos.length > 0) {
+                if (dados.fundamentos_juridicos?.length) {
                     message += `<br><b>Fundamentos Jurídicos:</b><ul>`;
                     dados.fundamentos_juridicos.forEach(f => message += `<li>${f}</li>`);
                     message += `</ul>`;
                 }
-                if (result.warnings && result.warnings.length > 0) {
+                if (result.warnings?.length) {
                     message += `<br><strong>⚠️ Avisos:</strong><br>`;
-                    result.warnings.forEach(warning => {
-                        message += `• ${warning}<br>`;
-                    });
+                    result.warnings.forEach(warning => message += `• ${warning}<br>`);
                 }
-                // AVISO DE PADRÃO DO ESCRITÓRIO
                 message += `<div class="info">A contestação será gerada conforme o <b>padrão do escritório</b>. Para personalizar, edite o arquivo <code>contestacao_padrao.txt</code> no projeto.</div>`;
                 showResult('uploadResult', message, 'success');
             } else {
@@ -177,6 +177,12 @@
             showResult('generateResult', 'Por favor, faça o upload de um PDF primeiro.', 'error');
             return;
         }
+
+        const tipo = document.getElementById('tipoGeracao').value;
+        let endpoint = '/generate-contestacao';
+        if (tipo === 'modelo-ia') endpoint = '/gerar-contestacao-ia';
+        if (tipo === 'ia-avancada') endpoint = '/gerar-contestacao-ia-avancada';
+
         const generateBtn = document.getElementById('generateBtn');
         const loading = document.getElementById('generateLoading');
         generateBtn.disabled = true;
@@ -189,15 +195,10 @@
         };
 
         try {
-            const response = await fetch(API_BASE + '/generate-contestacao', {
+            const response = await fetch(API_BASE + endpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    session_file: sessionFile,
-                    dados_reu: dadosReu
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_file: sessionFile, dados_reu: dadosReu })
             });
 
             const result = await response.json();
@@ -227,13 +228,10 @@
         resultDiv.innerHTML = `<div class="result ${type}">${message}</div>`;
     }
 
-    // Health check automático ao carregar
     window.onload = async function() {
         try {
             const response = await fetch(API_BASE + '/health');
-            if (response.ok) {
-                // ok!
-            } else {
+            if (!response.ok) {
                 showResult('uploadResult', '⚠️ API não está respondendo corretamente', 'error');
             }
         } catch (error) {
