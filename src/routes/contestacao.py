@@ -1,3 +1,4 @@
+from src.utils.ContestacaoIAGenerator import ContestacaoIAGenerator
 from flask import Blueprint, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 import os
@@ -227,3 +228,54 @@ def debug_lista_arquivos():
         "arquivos": arquivos
     })
 
+@contestacao_bp.route('/gerar-contestacao-ia-avancada', methods=['POST'])
+def gerar_contestacao_ia_avancada():
+    try:
+        data = request.get_json()
+        if not data or 'session_file' not in data:
+            return jsonify({'error': 'Dados da sessão não fornecidos'}), 400
+
+        session_file = data['session_file']
+        if not os.path.exists(session_file):
+            return jsonify({'error': 'Sessão expirada ou inválida'}), 400
+
+        with open(session_file, 'r', encoding='utf-8') as f:
+            dados_extraidos = json.load(f)
+
+        dados_reu = data.get('dados_reu', {})
+
+        # Inicializa IA Generator com API Key do ambiente
+        OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+        ia_generator = ContestacaoIAGenerator(api_key=OPENAI_API_KEY)
+
+        # Gera texto de contestação com placeholders + argumentos gerados via IA
+        contestacao_text = ia_generator.gerar_contestacao(dados_reu, dados_extraidos.get('fatos', ''))
+
+        # Salva arquivos nos formatos desejados
+        unique_id = str(uuid.uuid4())[:8]
+        output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'output')
+        os.makedirs(output_dir, exist_ok=True)
+
+        txt_path = os.path.join(output_dir, f'contestacao_{unique_id}.txt')
+        word_path = os.path.join(output_dir, f'contestacao_{unique_id}.docx')
+        pdf_path = os.path.join(output_dir, f'contestacao_{unique_id}.pdf')
+
+        doc_generator = DocumentGenerator()
+        with open(txt_path, 'w', encoding='utf-8') as f:
+            f.write(contestacao_text)
+        doc_generator.create_word_document(contestacao_text, word_path)
+        doc_generator.create_pdf_from_text(contestacao_text, pdf_path)
+
+        return jsonify({
+            'message': 'Contestação com placeholders + IA gerada com sucesso',
+            'contestacao_id': unique_id,
+            'files': {
+                'txt': txt_path,
+                'word': word_path,
+                'pdf': pdf_path
+            },
+            'preview': contestacao_text[:700] + '...' if len(contestacao_text) > 700 else contestacao_text
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Erro na geração avançada com IA: {str(e)}'}), 500
