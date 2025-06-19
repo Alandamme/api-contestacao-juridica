@@ -247,6 +247,8 @@ def gerar_contestacao_ia_avancada():
         # Inicializa IA Generator com API Key do ambiente
         OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
         ia_generator = ContestacaoIAGenerator(api_key=OPENAI_API_KEY)
+if not OPENAI_API_KEY:
+    return jsonify({'error': 'OPENAI_API_KEY não configurada no ambiente'}), 500
 
         # Gera texto de contestação com placeholders + argumentos gerados via IA
         contestacao_text = ia_generator.gerar_contestacao(dados_reu, dados_extraidos.get('fatos', ''))
