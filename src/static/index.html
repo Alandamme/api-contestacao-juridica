@@ -23,7 +23,7 @@
         .result { margin-top: 20px; padding: 16px; border-radius: 6px; }
         .success { background: #eafbea; color: #217344; border: 1px solid #baf2c6; }
         .error { background: #ffe6e6; color: #a33; border: 1px solid #ffc2c2; }
-        .info { background: #e9f2fb; color: #275377; border: 1px solid #b8dbfa; }
+        .info { background: #e9f2fb; color: #275377; border: 1px solid #b8dbfa; margin-top: 12px; }
         .preview {
             background: #f6f7fa; border: 1px solid #e4e8ef; padding: 13px 10px;
             border-radius: 6px; margin: 10px 0 8px 0; font-family: monospace; white-space: pre-wrap;
@@ -158,6 +158,8 @@
                         message += `• ${warning}<br>`;
                     });
                 }
+                // AVISO DE PADRÃO DO ESCRITÓRIO
+                message += `<div class="info">A contestação será gerada conforme o <b>padrão do escritório</b>. Para personalizar, edite o arquivo <code>contestacao_padrao.txt</code> no projeto.</div>`;
                 showResult('uploadResult', message, 'success');
             } else {
                 showResult('uploadResult', `❌ Erro: ${result.error}`, 'error');
