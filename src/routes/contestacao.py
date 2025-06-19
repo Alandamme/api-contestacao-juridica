@@ -228,6 +228,7 @@ def debug_lista_arquivos():
         "arquivos": arquivos
     })
 
+# 6. Geração avançada com IA (modelo + interpretação)
 @contestacao_bp.route('/gerar-contestacao-ia-avancada', methods=['POST'])
 def gerar_contestacao_ia_avancada():
     try:
@@ -244,19 +245,13 @@ def gerar_contestacao_ia_avancada():
 
         dados_reu = data.get('dados_reu', {})
 
-        # Inicializa IA Generator com API Key do ambiente
-       
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    return jsonify({'error': 'OPENAI_API_KEY não configurada no ambiente'}), 500
+        OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+        if not OPENAI_API_KEY:
+            return jsonify({'error': 'OPENAI_API_KEY não configurada no ambiente'}), 500
 
-ia_generator = ContestacaoIAGenerator(api_key=OPENAI_API_KEY)
-
-
-        # Gera texto de contestação com placeholders + argumentos gerados via IA
+        ia_generator = ContestacaoIAGenerator(api_key=OPENAI_API_KEY)
         contestacao_text = ia_generator.gerar_contestacao(dados_reu, dados_extraidos.get('fatos', ''))
 
-        # Salva arquivos nos formatos desejados
         unique_id = str(uuid.uuid4())[:8]
         output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'output')
         os.makedirs(output_dir, exist_ok=True)
