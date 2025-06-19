@@ -1,5 +1,7 @@
-import openai
+from openai import OpenAI
 from typing import Dict
+import json
+import os
 
 
 class ContestacaoIAGenerator:
@@ -7,7 +9,7 @@ class ContestacaoIAGenerator:
         """
         Inicializa o gerador de contestação com a chave da API e o modelo desejado.
         """
-        openai.api_key = api_key
+        self.client = OpenAI(api_key=api_key)
         self.model = model
 
     def carregar_modelo_padrao(self, caminho_arquivo: str = "src/utils/contestacao_padrao.txt") -> str:
@@ -46,13 +48,13 @@ class ContestacaoIAGenerator:
         )
 
         try:
-            resposta = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.4
             )
-            import json
-            return json.loads(resposta.choices[0].message["content"])
+            content = response.choices[0].message.content
+            return json.loads(content)
         except Exception as e:
             raise RuntimeError(f"Erro ao gerar argumentos jurídicos com IA: {e}")
 
