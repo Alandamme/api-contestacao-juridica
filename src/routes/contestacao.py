@@ -1,3 +1,15 @@
+from flask import Blueprint, request, jsonify
+import os
+import json
+import uuid
+
+from src.utils.ContestacaoIAGenerator import ContestacaoIAGenerator
+from src.utils.document_generator import DocumentGenerator
+
+# ✅ Define o blueprint ANTES de usá-lo nas rotas
+contestacao_bp = Blueprint('contestacao', __name__)
+
+
 @contestacao_bp.route('/gerar-contestacao-ia-avancada', methods=['POST'])
 def gerar_contestacao_ia_avancada():
     try:
@@ -65,4 +77,5 @@ def gerar_contestacao_ia_avancada():
 
     except Exception as e:
         return jsonify({'error': f'Erro na geração avançada com IA: {str(e)}'}), 500
+
 
