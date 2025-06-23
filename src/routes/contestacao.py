@@ -18,34 +18,39 @@ def gerar_contestacao_ia_avancada():
         if not OPENAI_API_KEY:
             return jsonify({'error': 'OPENAI_API_KEY não configurada no ambiente'}), 500
 
-        # Inicializa IA
+        # Inicializa gerador com IA
         ia_generator = ContestacaoIAGenerator(api_key=OPENAI_API_KEY)
 
-        # Gera argumentos jurídicos com IA com base na petição
+        # Gera argumentos jurídicos com IA
         argumentos_ia = ia_generator.gerar_argumentacao_ia(dados_extraidos.get('fatos', ''))
 
         # Junta todos os dados da petição + advogado + IA
         dados_completos = {
-            **dados_extraidos.get('autor', {}),
-            **dados_extraidos.get('reu', {}),
+            **(dados_extraidos.get('autor') or {}),
+            **(dados_extraidos.get('reu') or {}),
             'tipo_acao': dados_extraidos.get('tipo_acao', ''),
-            'valor_causa': dados_extrairos.get('valor_causa', ''),
+            'valor_causa': dados_extraidos.get('valor_causa', ''),
             **dados_reu,
             **argumentos_ia
         }
 
         # Caminho do modelo DOCX com placeholders
-        modelo_docx = os.path.join(os.path.dirname(__file__), '..', '..', 'static', 'modelos', 'modelo_contestacao_com_placeholders.docx')
+        modelo_docx = os.path.join(
+            os.path.dirname(__file__),
+            '..', '..', 'static', 'modelos',
+            'modelo_contestacao_com_placeholders.docx'
+        )
+
         if not os.path.exists(modelo_docx):
             return jsonify({'error': 'Modelo Word (.docx) com placeholders não encontrado'}), 500
 
-        # Define caminho de saída
+        # Caminho de saída
         unique_id = str(uuid.uuid4())[:8]
         output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'output')
         os.makedirs(output_dir, exist_ok=True)
         word_path = os.path.join(output_dir, f'contestacao_{unique_id}.docx')
 
-        # Gera documento Word formatado
+        # Geração do documento Word final
         doc_generator = DocumentGenerator()
         doc_generator.create_word_document_from_template(modelo_docx, word_path, dados_completos)
 
@@ -60,3 +65,4 @@ def gerar_contestacao_ia_avancada():
 
     except Exception as e:
         return jsonify({'error': f'Erro na geração avançada com IA: {str(e)}'}), 500
+
