@@ -3,7 +3,7 @@ services:
     name: contestacao-api
     dockerContext: .
     dockerfilePath: Dockerfile
-    startCommand: "python src/main.py"
+    startCommand: "gunicorn src.main:app"
     envVars:
       - key: PORT
         value: 5000
