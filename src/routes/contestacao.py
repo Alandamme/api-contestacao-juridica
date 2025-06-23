@@ -82,4 +82,3 @@ def gerar_contestacao():
 
     except Exception as e:
         return jsonify({'error': f'Erro ao gerar contestação: {str(e)}'}), 500
-
