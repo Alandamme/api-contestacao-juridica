@@ -10,18 +10,17 @@ class PDFProcessor:
 
     def __init__(self):
         self.extracted_data = {}
-        if not os.getenv("OPENAI_API_KEY"):
-            raise EnvironmentError("Variável de ambiente OPENAI_API_KEY não configurada.")
-        self.client = OpenAI()  # SDK moderna já lê da variável de ambiente
+        self.client = OpenAI()  # ✅ SDK moderna já lê da variável de ambiente
 
     def extract_text_from_pdf(self, file_path: str) -> str:
         try:
             with open(file_path, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
                 text = ""
-                for page_num in range(len(pdf_reader.pages)):
-                    page = pdf_reader.pages[page_num]
-                    text += page.extract_text() + "\n"
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
                 return text
         except Exception as e:
             raise Exception(f"Erro ao extrair texto do PDF: {str(e)}")
@@ -33,10 +32,8 @@ class PDFProcessor:
             dados_extraidos['texto_completo'] = text
             self.extracted_data = dados_extraidos
             return dados_extraidos
-except Exception as e:
-    print(f"[ERRO] process_pdf(): {e}")
-    raise Exception(f"Erro no processamento do PDF: {str(e)}")
-
+        except Exception as e:
+            raise Exception(f"Erro no processamento do PDF: {str(e)}")
 
     def extract_data_with_ai(self, text: str) -> dict:
         prompt = f"""
@@ -61,6 +58,7 @@ Texto da petição inicial:
 
 Responda SOMENTE com o JSON.
 """
+
         response = self.client.chat.completions.create(
             model="gpt-4o",
             messages=[
@@ -72,9 +70,14 @@ Responda SOMENTE com o JSON.
         )
 
         resposta_texto = response.choices[0].message.content
+
         try:
             dados = json.loads(resposta_texto)
         except Exception:
-            resposta_texto = resposta_texto[resposta_texto.find("{"):resposta_texto.rfind("}")+1]
-            dados = json.loads(resposta_texto)
+            try:
+                resposta_texto = resposta_texto[resposta_texto.find("{"):resposta_texto.rfind("}")+1]
+                dados = json.loads(resposta_texto)
+            except Exception as e:
+                raise Exception(f"Erro ao interpretar resposta JSON: {str(e)}\nResposta:\n{resposta_texto}")
+
         return dados
