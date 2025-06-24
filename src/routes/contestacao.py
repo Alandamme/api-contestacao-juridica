@@ -14,7 +14,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # 📄 1. Upload da Petição Inicial
-@contestacao_bp.route('/api/upload', methods=['POST'])
+@contestacao_bp.route('/upload', methods=['POST'])
 def upload_pdf():
     if 'file' not in request.files:
         return jsonify({'error': 'Nenhum arquivo enviado'}), 400
