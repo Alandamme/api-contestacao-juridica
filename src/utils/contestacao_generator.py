@@ -2,7 +2,6 @@ import os
 import uuid
 from .document_generator import WordContestacaoGenerator
 
-
 def gerar_contestacao_ia_formatada(dados_extraidos, dados_reu):
     id_contestacao = str(uuid.uuid4())
     nome_arquivo = f"{id_contestacao}.docx"
@@ -17,4 +16,3 @@ def gerar_contestacao_ia_formatada(dados_extraidos, dados_reu):
         "arquivo_path": caminho_saida,
         "preview": f"Contestação gerada com sucesso para o réu {dados_reu.get('advogado_reu', '')}."
     }
-
