@@ -1,10 +1,10 @@
-from flask import Blueprint, request, jsonify
+ffrom flask import Blueprint, request, jsonify
 import os
 import json
 import uuid
 from werkzeug.utils import secure_filename
 from src.utils.pdf_processor import PDFProcessor
-from src.utils.contestacao_generator import ContestacaoGenerator
+from src.utils.contestacao_generator import gerar_contestacao_ia_formatada
 
 contestacao_bp = Blueprint('contestacao', __name__)
 
@@ -12,7 +12,6 @@ ALLOWED_EXTENSIONS = {'pdf'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 
 # 📄 1. Upload da Petição Inicial
 @contestacao_bp.route('/api/upload', methods=['POST'])
@@ -51,8 +50,7 @@ def upload_pdf():
 
     return jsonify({'error': 'Arquivo inválido. Envie um PDF.'}), 400
 
-
-# ⚖️ 2. Gerar Contestação com IA Jurídica (única opção)
+# ⚖️ 2. Gerar Contestação com IA Jurídica
 @contestacao_bp.route('/api/gerar-contestacao', methods=['POST'])
 def gerar_contestacao():
     try:
@@ -68,17 +66,18 @@ def gerar_contestacao():
             dados_extraidos = json.load(f)
 
         dados_reu = data.get('dados_reu', {})
-        generator = ContestacaoGenerator()
-        contestacao_id, word_path, preview = generator.gerar_documento(dados_extraidos, dados_reu)
+
+        # ✅ Novo gerador unificado (IA jurídica e .docx)
+        resultado = gerar_contestacao_ia_formatada(dados_extraidos, dados_reu)
 
         return jsonify({
-            'message': 'Contestação gerada com sucesso',
-            'contestacao_id': contestacao_id,
-            'preview': preview,
+            'message': resultado["preview"],
+            'contestacao_id': resultado["contestacao_id"],
             'files': {
-                'word': word_path
+                'word': resultado["arquivo_path"]
             }
         }), 200
 
     except Exception as e:
         return jsonify({'error': f'Erro ao gerar contestação: {str(e)}'}), 500
+
