@@ -55,7 +55,7 @@ def gerar_contestacao():
 
         doc.add_heading("Pedidos da Petição Inicial", level=2)
         for pedido in dados_peticao.get("pedidos", []):
-            doc.add_paragraph(f"- {pedido}", style='List Bullet')
+                   doc.add_paragraph(f"- {pedido}", style='List Bullet')
 
         doc.add_heading("Fundamentos Jurídicos", level=2)
         for fundamento in dados_peticao.get("fundamentos_juridicos", []):
@@ -76,7 +76,7 @@ def gerar_contestacao():
         return jsonify({
             "message": "Contestação gerada com sucesso!",
             "files": {
-                "word": url_for("download_file", filename=output_filename, _external=True)
+                            "word": url_for("download_file", filename=output_filename, _external=True)
             }
         }), 200
     except Exception as e:
