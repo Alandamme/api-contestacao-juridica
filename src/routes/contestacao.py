@@ -25,7 +25,7 @@ def upload_pdf():
 
     try:
         dados_extraidos = pdf_processor.process_pdf(file_path)
-        # Retorna os dados extraídos e os próprios dados como \'session_file\' para simplificar
+        # Retorna os dados extraídos e os próprios dados como 'session_file' para simplificar
         return jsonify({"dados_extraidos": dados_extraidos, "session_file": dados_extraidos}), 200
     except Exception as e:
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
@@ -55,11 +55,11 @@ def gerar_contestacao():
 
         doc.add_heading("Pedidos da Petição Inicial", level=2)
         for pedido in dados_peticao.get("pedidos", []):
-            doc.add_paragraph(f"- {pedido}", style=\'List Bullet\')
+            doc.add_paragraph(f"- {pedido}", style='List Bullet')
 
         doc.add_heading("Fundamentos Jurídicos", level=2)
         for fundamento in dados_peticao.get("fundamentos_juridicos", []):
-            doc.add_paragraph(f"- {fundamento}", style=\'List Bullet\')
+            doc.add_paragraph(f"- {fundamento}", style='List Bullet')
 
         doc.add_heading("Dados do Advogado", level=2)
         doc.add_paragraph(f"Nome: {dados_advogado.get("nome_advogado", "")}")
