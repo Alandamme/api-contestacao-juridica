@@ -33,8 +33,10 @@ class PDFProcessor:
             dados_extraidos['texto_completo'] = text
             self.extracted_data = dados_extraidos
             return dados_extraidos
-        except Exception as e:
-            raise Exception(f"Erro no processamento do PDF: {str(e)}")
+except Exception as e:
+    print(f"[ERRO] process_pdf(): {e}")
+    raise Exception(f"Erro no processamento do PDF: {str(e)}")
+
 
     def extract_data_with_ai(self, text: str) -> dict:
         prompt = f"""
