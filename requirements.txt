@@ -24,7 +24,7 @@ lxml==5.4.0
 
 # 🤖 OpenAI API
 openai==1.91.0
-httpx>=0.28.0            # ✅ necessário para evitar erro 'proxies'
+httpx>=0.28.1            # ✅ necessário para evitar erro 'proxies'
 
 # 📚 Compatibilidade
 typing_extensions>=4.10.0
