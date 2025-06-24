@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: contestacao-api
+    dockerContext: .
+    dockerfilePath: Dockerfile
+    startCommand: "gunicorn src.main:app"
+    envVars:
+      - key: PORT
+        value: 5000
