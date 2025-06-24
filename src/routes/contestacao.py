@@ -16,68 +16,31 @@ def allowed_file(filename):
 # 📄 1. Upload da Petição Inicial
 @contestacao_bp.route('/upload', methods=['POST'])
 def upload_pdf():
-    if 'file' not in request.files:
-        return jsonify({'error': 'Nenhum arquivo enviado'}), 400
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'Nenhum arquivo enviado'}), 400
 
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'Nome do arquivo vazio'}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'Nome de arquivo inválido'}), 400
 
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        session_id = str(uuid.uuid4())
-        session_dir = os.path.join('uploads', session_id)
-        os.makedirs(session_dir, exist_ok=True)
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'Formato inválido. Envie um arquivo PDF.'}), 400
 
-        filepath = os.path.join(session_dir, filename)
-        file.save(filepath)
+        # Salva o PDF no diretório temporário
+        temp_path = f"/tmp/{file.filename}"
+        file.save(temp_path)
 
-        try:
-            processor = PDFProcessor()
-            dados = processor.process_pdf(filepath)
-        except Exception as e:
-            return jsonify({'error': f'Erro ao processar PDF: {str(e)}'}), 500
-
-        session_file = os.path.join(session_dir, 'session.json')
-        with open(session_file, 'w', encoding='utf-8') as f:
-            json.dump(dados, f, ensure_ascii=False, indent=2)
+        # Processa com IA
+        processor = PDFProcessor()
+        dados = processor.process_pdf(temp_path)
 
         return jsonify({
-            'message': 'Petição inicial processada com sucesso',
-            'session_file': session_file,
+            'mensagem': 'Petição processada com sucesso',
             'dados_extraidos': dados
         }), 200
 
-    return jsonify({'error': 'Arquivo inválido. Envie um PDF.'}), 400
-
-# ⚖️ 2. Gerar Contestação com IA Jurídica
-@contestacao_bp.route('/api/gerar-contestacao', methods=['POST'])
-def gerar_contestacao():
-    try:
-        data = request.get_json()
-        if not data or 'session_file' not in data:
-            return jsonify({'error': 'session_file ausente'}), 400
-
-        session_file = data['session_file']
-        if not os.path.exists(session_file):
-            return jsonify({'error': 'Arquivo de sessão não encontrado'}), 404
-
-        with open(session_file, 'r', encoding='utf-8') as f:
-            dados_extraidos = json.load(f)
-
-        dados_reu = data.get('dados_reu', {})
-
-        # ✅ Novo gerador unificado (IA jurídica e .docx)
-        resultado = gerar_contestacao_ia_formatada(dados_extraidos, dados_reu)
-
-        return jsonify({
-            'message': resultado["preview"],
-            'contestacao_id': resultado["contestacao_id"],
-            'files': {
-                'word': resultado["arquivo_path"]
-            }
-        }), 200
-
     except Exception as e:
-        return jsonify({'error': f'Erro ao gerar contestação: {str(e)}'}), 500
-
+        # Loga no terminal da Render
+        print(f"[ERRO] upload_pdf(): {e}")
+        return jsonify({'error': f"Erro ao processar PDF: {str(e)}"}), 500
