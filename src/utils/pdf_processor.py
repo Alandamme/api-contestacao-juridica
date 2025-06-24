@@ -10,7 +10,9 @@ class PDFProcessor:
 
     def __init__(self):
         self.extracted_data = {}
-        self.client = OpenAI()  # ✅ SDK moderna já lê da variável de ambiente
+        if not os.getenv("OPENAI_API_KEY"):
+            raise EnvironmentError("Variável de ambiente OPENAI_API_KEY não configurada.")
+        self.client = OpenAI()  # SDK moderna já lê da variável de ambiente
 
     def extract_text_from_pdf(self, file_path: str) -> str:
         try:
