@@ -1,4 +1,4 @@
-ffrom flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify
 import os
 import json
 import uuid
