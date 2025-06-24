@@ -10,6 +10,7 @@ class PDFProcessor:
 
     def __init__(self):
         self.extracted_data = {}
+        self.client = OpenAI()  # ✅ SDK moderna já lê da variável de ambiente
 
     def extract_text_from_pdf(self, file_path: str) -> str:
         try:
@@ -34,7 +35,6 @@ class PDFProcessor:
             raise Exception(f"Erro no processamento do PDF: {str(e)}")
 
     def extract_data_with_ai(self, text: str) -> dict:
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
         prompt = f"""
 Você é um assistente jurídico especializado em petições iniciais brasileiras.
 
@@ -57,7 +57,7 @@ Texto da petição inicial:
 
 Responda SOMENTE com o JSON.
 """
-        response = client.chat.completions.create(
+        response = self.client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": "Você é um assistente jurídico extrator de dados."},
