@@ -32,7 +32,7 @@
     <!-- Upload -->
     <div class="card">
       <div class="card-header section-title">
-        <i class="fas fa-file-upload"></i> 1. Enviar Petição Inicial (PDF)
+        <i class="fas fa-file-upload"></i> 1. Enviar Petição Inicial (PDF )
       </div>
       <div class="card-body">
         <form id="uploadForm">
@@ -84,60 +84,66 @@
   </div>
 
   <script>
-    let sessionFile = null;
-    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    let extractedPdfData = null; // Variável para armazenar os dados extraídos do PDF
+
+    document.getElementById("uploadForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
-      const status = document.getElementById('uploadStatus');
-      status.innerText = 'Processando...';
+      const status = document.getElementById("uploadStatus");
+      status.innerText = "Processando...";
 
       try {
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
         });
         const data = await res.json();
 
-        if (!res.ok) throw new Error(data.error);
+        if (!res.ok) throw new Error(data.erro || "Erro desconhecido");
 
-        sessionFile = data.session_file;
-        document.getElementById('dadosExtraidos').innerText = JSON.stringify(data.dados_extraidos, null, 2);
-        document.getElementById('dadosCard').classList.remove('d-none');
-        document.getElementById('formCard').classList.remove('d-none');
-        status.innerHTML = '<span class="text-success">Petição analisada com sucesso.</span>';
+        extractedPdfData = data.dados_extraidos; // Armazena os dados extraídos
+        document.getElementById("dadosExtraidos").innerText = JSON.stringify(extractedPdfData, null, 2);
+        document.getElementById("dadosCard").classList.remove("d-none");
+        document.getElementById("formCard").classList.remove("d-none");
+        status.innerHTML = 
+          "<span class=\"text-success\">Petição analisada com sucesso.</span>";
       } catch (err) {
-        status.innerHTML = `<span class="text-danger">Erro ao enviar PDF: ${err.message}</span>`;
+        status.innerHTML = `<span class=\"text-danger\">Erro ao enviar PDF: ${err.message}</span>`;
       }
     });
 
-    document.getElementById('contestacaoForm').addEventListener('submit', async (e) => {
+    document.getElementById("contestacaoForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const form = e.target;
-      const status = document.getElementById('gerarStatus');
-      status.innerText = 'Gerando contestação...';
+      const status = document.getElementById("gerarStatus");
+      status.innerText = "Gerando contestação...";
 
-      const dadosReu = {
+      const dadosAdvogado = {
         nome_advogado: form.nome.value,
         oab: form.oab.value,
-        estado: form.estado.value
+        estado: form.estado.value,
       };
 
       try {
-        const res = await fetch('/api/gerar-contestacao', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_file: sessionFile, dados_reu: dadosReu })
+        const res = await fetch("/api/gerar-contestacao", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_file: extractedPdfData, // Envia os dados extraídos do PDF
+            dados_advogado: dadosAdvogado,
+          }),
         });
         const data = await res.json();
 
-        if (!res.ok) throw new Error(data.error);
+        if (!res.ok) throw new Error(data.erro || "Erro desconhecido");
 
-        document.getElementById('previewText').innerText = data.message;
-        document.getElementById('linkDocx').href = data.files.word;
-        document.getElementById('resultadoCard').classList.remove('d-none');
-        status.innerHTML = '<span class="text-success">Contestação gerada com sucesso.</span>';
+        document.getElementById("previewText").innerText = data.message;
+        document.getElementById("linkDocx").href = data.files.word;
+        document.getElementById("resultadoCard").classList.remove("d-none");
+        status.innerHTML = 
+          "<span class=\"text-success\">Contestação gerada com sucesso.</span>";
       } catch (err) {
-        status.innerHTML = `<span class="text-danger">Erro: ${err.message}</span>`;
+        status.innerHTML = `<span class=\"text-danger\">Erro: ${err.message}</span>`;
       }
     });
   </script>
