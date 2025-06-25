@@ -1,52 +1,18 @@
 import os
-from flask import Blueprint, request, jsonify, send_file, url_for
+from flask import Blueprint, request, jsonify, url_for
 from werkzeug.utils import secure_filename
 from docx import Document
 from datetime import datetime
-import openai
 from src.utils.pdf_processor import PDFProcessor
+import openai
 
 contestacao_bp = Blueprint("contestacao", __name__)
 pdf_processor = PDFProcessor()
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
+MODELO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "modelos", "modelo_contestacao_com_placeholders_pronto.docx")
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Define a chave da API da OpenAI a partir do ambiente
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-
-# IA para gerar corpo da contestação
-def gerar_corpo_contestacao_ia(dados_peticao):
-    prompt = f"""
-Você é um advogado especialista em direito cível.
-
-Com base nas informações abaixo, redija uma CONTESTAÇÃO com estrutura jurídica formal, que inclua:
-- Preliminares (se existirem)
-- Defesa de mérito
-- Impugnação dos pedidos do autor
-- Fundamentos legais e doutrinários relevantes
-- Estilo técnico, claro, conciso
-
-DADOS EXTRAÍDOS DA PETIÇÃO:
-Autor: {dados_peticao.get('autor', '')}
-Réu: {dados_peticao.get('reu', '')}
-Tipo de ação: {dados_peticao.get('tipo_acao', '')}
-Valor da causa: {dados_peticao.get('valor_causa', '')}
-Fatos: {dados_peticao.get('fatos', '')}
-Pedidos: {dados_peticao.get('pedidos', '')}
-Fundamentos jurídicos: {dados_peticao.get('fundamentos_juridicos', '')}
-
-Escreva a contestação:
-"""
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
-        max_tokens=2048
-    )
-    return response.choices[0].message.content.strip()
-
 
 @contestacao_bp.route("/upload", methods=["POST"])
 def upload_pdf():
@@ -65,8 +31,8 @@ def upload_pdf():
         dados_extraidos = pdf_processor.process_pdf(file_path)
         return jsonify({"dados_extraidos": dados_extraidos, "session_file": dados_extraidos}), 200
     except Exception as e:
+        print(f"Erro ao processar PDF: {e}")
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
-
 
 @contestacao_bp.route("/gerar-contestacao", methods=["POST"])
 def gerar_contestacao():
@@ -81,31 +47,63 @@ def gerar_contestacao():
         return jsonify({"erro": "Dados incompletos para gerar contestação"}), 400
 
     try:
-        # Gera o corpo da contestação com IA
-        corpo_contestacao = gerar_corpo_contestacao_ia(dados_peticao)
+        # Etapa 1: Geração do corpo com IA jurídica (OpenAI GPT)
+        prompt = f"""
+        Elabore uma contestação jurídica completa, considerando os seguintes elementos extraídos da petição inicial:
 
-        # Caminho para o modelo DOCX com placeholders
-        modelo_path = os.path.join(os.path.dirname(__file__), "..", "static", "modelos", "modelo_contestacao_com_placeholders_pronto.docx")
-        doc = Document(modelo_path)
+        - Autor: {dados_peticao.get("autor", "")}
+        - Réu: {dados_peticao.get("reu", "")}
+        - Tipo de Ação: {dados_peticao.get("tipo_acao", "")}
+        - Valor da Causa: {dados_peticao.get("valor_causa", "")}
 
-        # Substituição dos campos
-        campos = {
-            "{{autor}}": dados_peticao.get("autor", ""),
-            "{{reu}}": dados_peticao.get("reu", ""),
-            "{{numero_processo}}": dados_peticao.get("numero_processo", "0000000-00.0000.0.00.0000"),
-            "{{vara_comarca}}": dados_peticao.get("vara", "Vara Única da Comarca de ..."),
-            "{{juiz_destino}}": "Excelentíssimo Senhor Doutor Juiz de Direito",
-            "{{titulo_documento}}": "CONTESTAÇÃO",
-            "{{corpo_contestacao}}": corpo_contestacao,
-            "{{assinatura}}": f"{dados_advogado.get('nome_advogado', '')} – OAB/{dados_advogado.get('estado', '')} {dados_advogado.get('oab', '')}"
+        Resumo dos fatos:
+        {dados_peticao.get("fatos", "")}
+
+        Pedidos do autor:
+        {dados_peticao.get("pedidos", [])}
+
+        Fundamentos jurídicos apresentados:
+        {dados_peticao.get("fundamentos_juridicos", [])}
+
+        Gere uma contestação técnica, clara e fundamentada com base nessas informações.
+        """
+
+        openai.api_key = os.environ.get("OPENAI_API_KEY")
+        completion = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Você é um advogado especializado em direito civil, especialista em petições."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=1500
+        )
+
+        corpo_gerado = completion.choices[0].message.content.strip()
+
+        # Etapa 2: Substituição no modelo Word
+        doc = Document(MODELO_PATH)
+
+        placeholders = {
+            "{{AUTOR}}": dados_peticao.get("autor", ""),
+            "{{REU}}": dados_peticao.get("reu", ""),
+            "{{TIPO_ACAO}}": dados_peticao.get("tipo_acao", ""),
+            "{{VALOR_CAUSA}}": dados_peticao.get("valor_causa", ""),
+            "{{RESUMO_FATOS}}": dados_peticao.get("fatos", ""),
+            "{{PEDIDOS}}": "\n".join(f"- {p}" for p in dados_peticao.get("pedidos", [])),
+            "{{FUNDAMENTOS_JURIDICOS}}": "\n".join(f"- {f}" for f in dados_peticao.get("fundamentos_juridicos", [])),
+            "{{NOME_ADVOGADO}}": dados_advogado.get("nome_advogado", ""),
+            "{{OAB}}": dados_advogado.get("oab", ""),
+            "{{ESTADO}}": dados_advogado.get("estado", ""),
+            "{{CONTESTACAO_IA}}": corpo_gerado
         }
 
-        for p in doc.paragraphs:
-            for key, val in campos.items():
-                if key in p.text:
-                    p.text = p.text.replace(key, val)
+        for paragraph in doc.paragraphs:
+            for key, value in placeholders.items():
+                if key in paragraph.text:
+                    paragraph.text = paragraph.text.replace(key, value)
 
-        # Salvar o novo arquivo gerado
+        # Salvar a versão final
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_{timestamp}.docx"
         output_path = os.path.join(UPLOAD_FOLDER, output_filename)
@@ -114,18 +112,11 @@ def gerar_contestacao():
         return jsonify({
             "message": "Contestação gerada com sucesso!",
             "files": {
-                "word": url_for("contestacao.download_file", filename=output_filename, _external=True)
+                "word": url_for("download_file", filename=output_filename, _external=True)
             }
         }), 200
 
     except Exception as e:
+        print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
 
-
-@contestacao_bp.route("/download/<filename>", methods=["GET"])
-def download_file(filename):
-    try:
-        path = os.path.join(UPLOAD_FOLDER, filename)
-        return send_file(path, as_attachment=True)
-    except Exception as e:
-        return jsonify({"erro": f"Erro ao baixar arquivo: {str(e)}"}), 500
