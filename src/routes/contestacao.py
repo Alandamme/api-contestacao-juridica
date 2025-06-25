@@ -120,4 +120,3 @@ def gerar_contestacao():
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
 
-
