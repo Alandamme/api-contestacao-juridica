@@ -14,8 +14,7 @@ from src.routes.contestacao import contestacao_bp
 app = Flask(
     __name__,
     static_folder=os.path.join(os.path.dirname(__file__), 'static'),
-   template_folder=os.path.join(os.path.dirname(__file__), 'templates')
-
+    template_folder=os.path.join(os.path.dirname(__file__), 'templates')
 )
 
 # Configurações básicas
@@ -56,3 +55,4 @@ def health():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
