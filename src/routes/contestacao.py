@@ -4,7 +4,7 @@ from werkzeug.utils import secure_filename
 from docx import Document
 from datetime import datetime
 from src.utils.pdf_processor import PDFProcessor
-import openai
+from openai import OpenAI
 
 contestacao_bp = Blueprint("contestacao", __name__)
 pdf_processor = PDFProcessor()
@@ -68,8 +68,8 @@ def gerar_contestacao():
         Gere uma contestação técnica, clara e fundamentada com base nessas informações.
         """
 
-        openai.api_key = os.environ.get("OPENAI_API_KEY")
-        completion = openai.ChatCompletion.create(
+        client = OpenAI()
+        completion = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Você é um advogado especializado em direito civil, especialista em petições."},
@@ -119,4 +119,5 @@ def gerar_contestacao():
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+
 
