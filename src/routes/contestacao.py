@@ -86,3 +86,4 @@ def gerar_contestacao():
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")  # Adicionado para depuração
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+
