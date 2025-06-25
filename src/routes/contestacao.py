@@ -62,7 +62,7 @@ def gerar_contestacao():
                  doc.add_paragraph(f"- {pedido}", style='List Bullet')
         doc.add_heading("Fundamentos Jurídicos", level=2)
         for fundamento in dados_peticao.get("fundamentos_juridicos", []):
-            doc.add_paragraph(f"- {fundamento}", style=\'List Bullet\')
+            doc.add_paragraph(f"- {fundamento}", style='List Bullet')
 
         doc.add_heading("Dados do Advogado", level=2)
         doc.add_paragraph(f"Nome: {dados_advogado.get("nome_advogado", "")}")
