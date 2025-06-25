@@ -1,9 +1,12 @@
 services:
   - type: web
     name: contestacao-api
+    env: docker
     dockerContext: .
     dockerfilePath: Dockerfile
-    startCommand: "gunicorn src.main:app"
+    startCommand: gunicorn src.main:app
     envVars:
       - key: PORT
         value: 5000
+      - key: OPENAI_API_KEY
+        sync: false  # você adicionará essa variável manualmente no painel da Render
