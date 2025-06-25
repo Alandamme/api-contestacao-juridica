@@ -31,7 +31,7 @@ def upload_pdf():
         # Retorna os dados extraídos e os próprios dados como 'session_file' para simplificar
         return jsonify({"dados_extraidos": dados_extraidos, "session_file": dados_extraidos}), 200
     except Exception as e:
-        print(f"Erro ao processar PDF: {e}") # Adicionado para depuração
+        print(f"Erro ao processar PDF: {e}")  # Adicionado para depuração
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
 
 @contestacao_bp.route("/gerar-contestacao", methods=["POST"])
@@ -40,7 +40,7 @@ def gerar_contestacao():
     if not data:
         return jsonify({"erro": "JSON ausente"}), 400
 
-    dados_peticao = data.get("session_file") # Agora session_file contém os dados da petição
+    dados_peticao = data.get("session_file")  # Agora session_file contém os dados da petição
     dados_advogado = data.get("dados_advogado")
 
     if not dados_peticao or not dados_advogado:
@@ -50,24 +50,25 @@ def gerar_contestacao():
         doc = Document()
 
         doc.add_heading("CONTESTAÇÃO", level=1)
-        doc.add_paragraph(f"Autor: {dados_peticao.get("autor", "")}")
-        doc.add_paragraph(f"Réu: {dados_peticao.get("reu", "")}")
-        doc.add_paragraph(f"Tipo da Ação: {dados_peticao.get("tipo_acao", "")}")
-        doc.add_paragraph(f"Valor da Causa: R$ {dados_peticao.get("valor_causa", "")}")
+        doc.add_paragraph(f"Autor: {dados_peticao.get('autor', '')}")
+        doc.add_paragraph(f"Réu: {dados_peticao.get('reu', '')}")
+        doc.add_paragraph(f"Tipo da Ação: {dados_peticao.get('tipo_acao', '')}")
+        doc.add_paragraph(f"Valor da Causa: R$ {dados_peticao.get('valor_causa', '')}")
         doc.add_heading("Resumo dos Fatos", level=2)
-        doc.add_paragraph(dados_peticao.get("fatos", ""))
+        doc.add_paragraph(dados_peticao.get('fatos', ''))
 
         doc.add_heading("Pedidos da Petição Inicial", level=2)
-        for pedido in dados_peticao.get("pedidos", []):
-                 doc.add_paragraph(f"- {pedido}", style='List Bullet')
+        for pedido in dados_peticao.get('pedidos', []):
+            doc.add_paragraph(f"- {pedido}", style='List Bullet')
+
         doc.add_heading("Fundamentos Jurídicos", level=2)
-        for fundamento in dados_peticao.get("fundamentos_juridicos", []):
+        for fundamento in dados_peticao.get('fundamentos_juridicos', []):
             doc.add_paragraph(f"- {fundamento}", style='List Bullet')
 
         doc.add_heading("Dados do Advogado", level=2)
-        doc.add_paragraph(f"Nome: {dados_advogado.get("nome_advogado", "")}")
-        doc.add_paragraph(f"OAB: {dados_advogado.get("oab", "")}")
-        doc.add_paragraph(f"Estado: {dados_advogado.get("estado", "")}")
+        doc.add_paragraph(f"Nome: {dados_advogado.get('nome_advogado', '')}")
+        doc.add_paragraph(f"OAB: {dados_advogado.get('oab', '')}")
+        doc.add_paragraph(f"Estado: {dados_advogado.get('estado', '')}")
 
         # Salvar o arquivo .docx na pasta de uploads
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -83,6 +84,5 @@ def gerar_contestacao():
             }
         }), 200
     except Exception as e:
-        print(f"Erro ao gerar contestação: {e}") # Adicionado para depuração
+        print(f"Erro ao gerar contestação: {e}")  # Adicionado para depuração
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
-
