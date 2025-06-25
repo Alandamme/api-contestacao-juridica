@@ -10,6 +10,9 @@ pdf_processor = PDFProcessor()
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
 
+# Garante que a pasta de uploads exista
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 @contestacao_bp.route("/upload", methods=["POST"])
 def upload_pdf():
     if "pdf" not in request.files:
@@ -28,6 +31,7 @@ def upload_pdf():
         # Retorna os dados extraídos e os próprios dados como 'session_file' para simplificar
         return jsonify({"dados_extraidos": dados_extraidos, "session_file": dados_extraidos}), 200
     except Exception as e:
+        print(f"Erro ao processar PDF: {e}") # Adicionado para depuração
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
 
 @contestacao_bp.route("/gerar-contestacao", methods=["POST"])
@@ -55,11 +59,11 @@ def gerar_contestacao():
 
         doc.add_heading("Pedidos da Petição Inicial", level=2)
         for pedido in dados_peticao.get("pedidos", []):
-                   doc.add_paragraph(f"- {pedido}", style='List Bullet')
+            doc.add_paragraph(f"- {pedido}", style=\'List Bullet\')
 
         doc.add_heading("Fundamentos Jurídicos", level=2)
         for fundamento in dados_peticao.get("fundamentos_juridicos", []):
-            doc.add_paragraph(f"- {fundamento}", style='List Bullet')
+            doc.add_paragraph(f"- {fundamento}", style=\'List Bullet\')
 
         doc.add_heading("Dados do Advogado", level=2)
         doc.add_paragraph(f"Nome: {dados_advogado.get("nome_advogado", "")}")
@@ -76,8 +80,9 @@ def gerar_contestacao():
         return jsonify({
             "message": "Contestação gerada com sucesso!",
             "files": {
-                            "word": url_for("download_file", filename=output_filename, _external=True)
+                "word": url_for("download_file", filename=output_filename, _external=True)
             }
         }), 200
     except Exception as e:
+        print(f"Erro ao gerar contestação: {e}") # Adicionado para depuração
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
