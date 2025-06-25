@@ -3,15 +3,50 @@ from flask import Blueprint, request, jsonify, send_file, url_for
 from werkzeug.utils import secure_filename
 from docx import Document
 from datetime import datetime
+import openai
 from src.utils.pdf_processor import PDFProcessor
 
 contestacao_bp = Blueprint("contestacao", __name__)
 pdf_processor = PDFProcessor()
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
-
-# Garante que a pasta de uploads exista
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Define a chave da API da OpenAI a partir do ambiente
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+
+# IA para gerar corpo da contestação
+def gerar_corpo_contestacao_ia(dados_peticao):
+    prompt = f"""
+Você é um advogado especialista em direito cível.
+
+Com base nas informações abaixo, redija uma CONTESTAÇÃO com estrutura jurídica formal, que inclua:
+- Preliminares (se existirem)
+- Defesa de mérito
+- Impugnação dos pedidos do autor
+- Fundamentos legais e doutrinários relevantes
+- Estilo técnico, claro, conciso
+
+DADOS EXTRAÍDOS DA PETIÇÃO:
+Autor: {dados_peticao.get('autor', '')}
+Réu: {dados_peticao.get('reu', '')}
+Tipo de ação: {dados_peticao.get('tipo_acao', '')}
+Valor da causa: {dados_peticao.get('valor_causa', '')}
+Fatos: {dados_peticao.get('fatos', '')}
+Pedidos: {dados_peticao.get('pedidos', '')}
+Fundamentos jurídicos: {dados_peticao.get('fundamentos_juridicos', '')}
+
+Escreva a contestação:
+"""
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+        max_tokens=2048
+    )
+    return response.choices[0].message.content.strip()
+
 
 @contestacao_bp.route("/upload", methods=["POST"])
 def upload_pdf():
@@ -28,11 +63,10 @@ def upload_pdf():
 
     try:
         dados_extraidos = pdf_processor.process_pdf(file_path)
-        # Retorna os dados extraídos e os próprios dados como 'session_file' para simplificar
         return jsonify({"dados_extraidos": dados_extraidos, "session_file": dados_extraidos}), 200
     except Exception as e:
-        print(f"Erro ao processar PDF: {e}")  # Adicionado para depuração
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
+
 
 @contestacao_bp.route("/gerar-contestacao", methods=["POST"])
 def gerar_contestacao():
@@ -40,50 +74,58 @@ def gerar_contestacao():
     if not data:
         return jsonify({"erro": "JSON ausente"}), 400
 
-    dados_peticao = data.get("session_file")  # Agora session_file contém os dados da petição
+    dados_peticao = data.get("session_file")
     dados_advogado = data.get("dados_advogado")
 
     if not dados_peticao or not dados_advogado:
         return jsonify({"erro": "Dados incompletos para gerar contestação"}), 400
 
     try:
-        doc = Document()
+        # Gera o corpo da contestação com IA
+        corpo_contestacao = gerar_corpo_contestacao_ia(dados_peticao)
 
-        doc.add_heading("CONTESTAÇÃO", level=1)
-        doc.add_paragraph(f"Autor: {dados_peticao.get('autor', '')}")
-        doc.add_paragraph(f"Réu: {dados_peticao.get('reu', '')}")
-        doc.add_paragraph(f"Tipo da Ação: {dados_peticao.get('tipo_acao', '')}")
-        doc.add_paragraph(f"Valor da Causa: R$ {dados_peticao.get('valor_causa', '')}")
-        doc.add_heading("Resumo dos Fatos", level=2)
-        doc.add_paragraph(dados_peticao.get('fatos', ''))
+        # Caminho para o modelo DOCX com placeholders
+        modelo_path = os.path.join(os.path.dirname(__file__), "..", "static", "modelos", "modelo_contestacao_com_placeholders_pronto.docx")
+        doc = Document(modelo_path)
 
-        doc.add_heading("Pedidos da Petição Inicial", level=2)
-        for pedido in dados_peticao.get('pedidos', []):
-            doc.add_paragraph(f"- {pedido}", style='List Bullet')
+        # Substituição dos campos
+        campos = {
+            "{{autor}}": dados_peticao.get("autor", ""),
+            "{{reu}}": dados_peticao.get("reu", ""),
+            "{{numero_processo}}": dados_peticao.get("numero_processo", "0000000-00.0000.0.00.0000"),
+            "{{vara_comarca}}": dados_peticao.get("vara", "Vara Única da Comarca de ..."),
+            "{{juiz_destino}}": "Excelentíssimo Senhor Doutor Juiz de Direito",
+            "{{titulo_documento}}": "CONTESTAÇÃO",
+            "{{corpo_contestacao}}": corpo_contestacao,
+            "{{assinatura}}": f"{dados_advogado.get('nome_advogado', '')} – OAB/{dados_advogado.get('estado', '')} {dados_advogado.get('oab', '')}"
+        }
 
-        doc.add_heading("Fundamentos Jurídicos", level=2)
-        for fundamento in dados_peticao.get('fundamentos_juridicos', []):
-            doc.add_paragraph(f"- {fundamento}", style='List Bullet')
+        for p in doc.paragraphs:
+            for key, val in campos.items():
+                if key in p.text:
+                    p.text = p.text.replace(key, val)
 
-        doc.add_heading("Dados do Advogado", level=2)
-        doc.add_paragraph(f"Nome: {dados_advogado.get('nome_advogado', '')}")
-        doc.add_paragraph(f"OAB: {dados_advogado.get('oab', '')}")
-        doc.add_paragraph(f"Estado: {dados_advogado.get('estado', '')}")
-
-        # Salvar o arquivo .docx na pasta de uploads
+        # Salvar o novo arquivo gerado
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_{timestamp}.docx"
         output_path = os.path.join(UPLOAD_FOLDER, output_filename)
         doc.save(output_path)
 
-        # Retornar uma URL para o arquivo gerado
         return jsonify({
             "message": "Contestação gerada com sucesso!",
             "files": {
-                "word": url_for("download_file", filename=output_filename, _external=True)
+                "word": url_for("contestacao.download_file", filename=output_filename, _external=True)
             }
         }), 200
+
     except Exception as e:
-        print(f"Erro ao gerar contestação: {e}")  # Adicionado para depuração
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
 
+
+@contestacao_bp.route("/download/<filename>", methods=["GET"])
+def download_file(filename):
+    try:
+        path = os.path.join(UPLOAD_FOLDER, filename)
+        return send_file(path, as_attachment=True)
+    except Exception as e:
+        return jsonify({"erro": f"Erro ao baixar arquivo: {str(e)}"}), 500
