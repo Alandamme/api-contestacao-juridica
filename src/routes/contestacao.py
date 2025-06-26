@@ -28,20 +28,16 @@ def upload_pdf():
 
     try:
         dados_extraidos = pdf_processor.process_pdf(file_path)
-        return jsonify({
-            "dados_extraidos": dados_extraidos,
-            "session_file": dados_extraidos
-        }), 200
+        return jsonify({"dados_extraidos": dados_extraidos, "session_file": dados_extraidos}), 200
     except Exception as e:
         print(f"Erro ao processar PDF: {e}")
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
 
 @contestacao_bp.route("/testar-ia", methods=["POST"])
-def testar_ia():
-    try:
-        data = request.get_json(force=True)
-    except Exception as e:
-        return jsonify({"erro": "Erro ao ler JSON: " + str(e)}), 400
+def testar_ia_contestacao():
+    data = request.json
+    if not data:
+        return jsonify({"erro": "JSON ausente"}), 400
 
     dados_peticao = data.get("session_file")
     if not dados_peticao:
@@ -69,35 +65,39 @@ def testar_ia():
         """
 
         client = OpenAI()
-        completion = client.chat.completions.create(
+        stream = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Você é um advogado especializado em direito civil, especialista em petições."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.5,
-            max_tokens=800
+            temperature=0.7,
+            max_tokens=1500,
+            stream=True
         )
 
-        corpo_gerado = completion.choices[0].message.content.strip()
-        return jsonify({"corpo_gerado": corpo_gerado}), 200
+        corpo_gerado = ""
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                corpo_gerado += chunk.choices[0].delta.content
+
+        return jsonify({"corpo_ia": corpo_gerado.strip()}), 200
 
     except Exception as e:
-        print(f"Erro ao gerar texto com IA: {e}")
-        return jsonify({"erro": f"Erro ao gerar texto com IA: {str(e)}"}), 500
+        print(f"Erro ao gerar IA: {e}")
+        return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
 
 @contestacao_bp.route("/gerar-contestacao", methods=["POST"])
 def gerar_contestacao():
-    try:
-        data = request.get_json(force=True)
-    except Exception as e:
-        return jsonify({"erro": "Erro ao ler JSON: " + str(e)}), 400
+    data = request.json
+    if not data:
+        return jsonify({"erro": "JSON ausente"}), 400
 
     dados_peticao = data.get("session_file")
     dados_advogado = data.get("dados_advogado")
-    corpo_gerado = data.get("corpo_gerado")
+    corpo_ia = data.get("corpo_ia")
 
-    if not dados_peticao or not dados_advogado or not corpo_gerado:
+    if not dados_peticao or not dados_advogado or not corpo_ia:
         return jsonify({"erro": "Dados incompletos para gerar contestação"}), 400
 
     try:
@@ -109,18 +109,18 @@ def gerar_contestacao():
             "{{TIPO_ACAO}}": dados_peticao.get("tipo_acao", ""),
             "{{VALOR_CAUSA}}": dados_peticao.get("valor_causa", ""),
             "{{RESUMO_FATOS}}": dados_peticao.get("fatos", ""),
-            "{{PEDIDOS}}": "\n".join(f"- {p}" for p in dados_peticao.get("pedidos") or []),
-            "{{FUNDAMENTOS_JURIDICOS}}": "\n".join(f"- {f}" for f in dados_peticao.get("fundamentos_juridicos") or []),
+            "{{PEDIDOS}}": "\n".join(f"- {p}" for p in dados_peticao.get("pedidos", [])),
+            "{{FUNDAMENTOS_JURIDICOS}}": "\n".join(f"- {f}" for f in dados_peticao.get("fundamentos_juridicos", [])),
             "{{NOME_ADVOGADO}}": dados_advogado.get("nome_advogado", ""),
             "{{OAB}}": dados_advogado.get("oab", ""),
             "{{ESTADO}}": dados_advogado.get("estado", ""),
-            "{{CONTESTACAO_IA}}": corpo_gerado
+            "{{CONTESTACAO_IA}}": corpo_ia
         }
 
-        for p in doc.paragraphs:
-            for key, val in placeholders.items():
-                if key in p.text:
-                    p.text = p.text.replace(key, val)
+        for paragraph in doc.paragraphs:
+            for key, value in placeholders.items():
+                if key in paragraph.text:
+                    paragraph.text = paragraph.text.replace(key, value)
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_{timestamp}.docx"
@@ -137,4 +137,3 @@ def gerar_contestacao():
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
-
