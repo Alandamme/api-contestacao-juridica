@@ -1,174 +1,120 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Gerador de Contestação Jurídica</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body {
+      padding-top: 40px;
+      background-color: #f8f9fa;
+    }
+    .preview-card {
+      white-space: pre-wrap;
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      border: 1px solid #dee2e6;
+    }
+  </style>
 </head>
-<body class="bg-light">
+<body>
+  <div class="container">
+    <h2 class="text-center mb-4"><i class="bi bi-file-earmark-text"></i> Gerador de Contestação Jurídica</h2>
 
-<div class="container py-5">
-  <h1 class="mb-4 text-center">
-    <i class="bi bi-file-earmark-text-fill me-2"></i>Gerador de Contestação Jurídica
-  </h1>
+    <!-- Upload PDF -->
+    <div class="card mb-4">
+      <div class="card-header"><strong>1. Envie a Petição Inicial (PDF)</strong></div>
+      <div class="card-body">
+        <form id="form-upload">
+          <div class="mb-3">
+            <input type="file" class="form-control" id="pdfFile" accept="application/pdf" required>
+          </div>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Enviar PDF</button>
+        </form>
+      </div>
+    </div>
 
-  <!-- Upload PDF -->
-  <div class="card mb-4">
-    <div class="card-header"><i class="bi bi-upload"></i> Enviar Petição Inicial (PDF)</div>
-    <div class="card-body">
-      <form id="upload-form">
-        <input type="file" name="pdf" accept=".pdf" class="form-control mb-3" required>
-        <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-up-circle"></i> Enviar</button>
-      </form>
-      <div id="upload-status" class="mt-3"></div>
+    <!-- Dados do advogado -->
+    <div class="card mb-4">
+      <div class="card-header"><strong>2. Dados do Advogado</strong></div>
+      <div class="card-body">
+        <form id="form-advogado">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <input type="text" class="form-control" id="nome_advogado" placeholder="Nome do Advogado" required>
+            </div>
+            <div class="col-md-3">
+              <input type="text" class="form-control" id="oab" placeholder="OAB" required>
+            </div>
+            <div class="col-md-3">
+              <input type="text" class="form-control" id="estado" placeholder="Estado" required>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="d-flex justify-content-between mb-4">
+      <button class="btn btn-warning" id="btn-testar-ia"><i class="bi bi-lightbulb"></i> Testar IA</button>
+      <button class="btn btn-success" id="btn-gerar-contestacao"><i class="bi bi-file-earmark-word"></i> Gerar Contestação (Word)</button>
+    </div>
+
+    <!-- Visualização IA -->
+    <div class="card mb-4">
+      <div class="card-header"><strong>Corpo da Contestação Gerado por IA</strong></div>
+      <div class="card-body preview-card" id="preview-contestacao">Nenhum conteúdo gerado ainda.</div>
     </div>
   </div>
 
-  <!-- Dados extraídos -->
-  <div class="card mb-4 d-none" id="dados-extraidos-card">
-    <div class="card-header"><i class="bi bi-clipboard-data"></i> Dados Extraídos</div>
-    <div class="card-body" id="dados-extraidos-preview"></div>
-  </div>
+  <script>
+    let sessionFile = null;
+    let corpoGerado = "";
 
-  <!-- Botão testar IA -->
-  <div class="d-grid gap-2 mt-4 d-none" id="testar-ia-container">
-    <button id="testar-ia-btn" class="btn btn-outline-secondary">
-      <i class="bi bi-robot"></i> Testar IA (Prévia da Contestação)
-    </button>
-  </div>
+    document.getElementById("form-upload").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const file = document.getElementById("pdfFile").files[0];
+      const formData = new FormData();
+      formData.append("pdf", file);
 
-  <!-- Pré-visualização -->
-  <div class="card mt-4 d-none" id="preview-card">
-    <div class="card-header"><i class="bi bi-chat-left-dots-fill"></i> Pré-visualização da Contestação</div>
-    <div class="card-body">
-      <pre id="preview-texto" class="bg-light border p-3 rounded" style="white-space: pre-wrap; max-height: 400px; overflow-y: auto;"></pre>
-    </div>
-  </div>
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData
+      });
 
-  <!-- Dados do advogado -->
-  <div class="card mb-4 d-none" id="advogado-card">
-    <div class="card-header"><i class="bi bi-person-badge"></i> Dados do Advogado</div>
-    <div class="card-body">
-      <form id="advogado-form">
-        <div class="mb-3">
-          <label for="nome_advogado" class="form-label">Nome do Advogado</label>
-          <input type="text" class="form-control" id="nome_advogado" required>
-        </div>
-        <div class="mb-3">
-          <label for="oab" class="form-label">Número da OAB</label>
-          <input type="text" class="form-control" id="oab" required>
-        </div>
-        <div class="mb-3">
-          <label for="estado" class="form-label">Estado</label>
-          <input type="text" class="form-control" id="estado" required>
-        </div>
-        <button type="submit" class="btn btn-success"><i class="bi bi-file-earmark-word-fill"></i> Gerar Contestação</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Resultado -->
-  <div class="alert alert-success d-none mt-4" id="resultado"></div>
-</div>
-
-<script>
-  let sessionFile = null;
-  let corpoGerado = null;
-
-  document.getElementById("upload-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const status = document.getElementById("upload-status");
-    status.innerHTML = "⌛ Enviando arquivo...";
-
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
-    const data = await res.json();
-
-    if (data.dados_extraidos) {
-      sessionFile = data.dados_extraidos;
-
-      const preview = document.getElementById("dados-extraidos-preview");
-      preview.innerHTML = `
-        <p><strong>Autor:</strong> ${sessionFile.autor}</p>
-        <p><strong>Réu:</strong> ${sessionFile.reu}</p>
-        <p><strong>Tipo de Ação:</strong> ${sessionFile.tipo_acao}</p>
-        <p><strong>Valor da Causa:</strong> ${sessionFile.valor_causa}</p>
-        <p><strong>Fatos:</strong> ${sessionFile.fatos}</p>
-        <p><strong>Pedidos:</strong> <ul>${sessionFile.pedidos.map(p => `<li>${p}</li>`).join("")}</ul></p>
-        <p><strong>Fundamentos Jurídicos:</strong> <ul>${sessionFile.fundamentos_juridicos.map(f => `<li>${f}</li>`).join("")}</ul></p>
-      `;
-
-      document.getElementById("dados-extraidos-card").classList.remove("d-none");
-      document.getElementById("advogado-card").classList.remove("d-none");
-      document.getElementById("testar-ia-container").classList.remove("d-none");
-      status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Dados extraídos com sucesso!</span>';
-    } else {
-      status.innerHTML = '<span class="text-danger">❌ Erro ao processar PDF</span>';
-    }
-  });
-
-  document.getElementById("testar-ia-btn").addEventListener("click", async () => {
-    const btn = document.getElementById("testar-ia-btn");
-    const previewCard = document.getElementById("preview-card");
-    const previewTexto = document.getElementById("preview-texto");
-
-    btn.disabled = true;
-    btn.innerHTML = '<i class="bi bi-robot"></i> Gerando com IA...';
-
-    const res = await fetch("/api/testar-ia", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_file: sessionFile })
+      const data = await response.json();
+      if (response.ok) {
+        sessionFile = data.session_file;
+        alert("PDF processado com sucesso!");
+      } else {
+        alert("Erro: " + data.erro);
+      }
     });
 
-    const data = await res.json();
+    document.getElementById("btn-testar-ia").addEventListener("click", async function () {
+      if (!sessionFile) {
+        return alert("Envie e processe um PDF primeiro.");
+      }
 
-    if (res.ok && data.corpo_gerado) {
-      corpoGerado = data.corpo_gerado;
-      previewTexto.textContent = corpoGerado;
-    } else {
-      corpoGerado = null;
-      previewTexto.textContent = `❌ Erro: ${data.erro || "Erro ao gerar prévia da IA"}`;
-    }
+      const advogado = getDadosAdvogado();
+      const response = await fetch("/api/testar-ia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_file: sessionFile, dados_advogado: advogado })
+      });
 
-    previewCard.classList.remove("d-none");
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-robot"></i> Testar IA (Prévia da Contestação)';
-  });
-
-  document.getElementById("advogado-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const nome = document.getElementById("nome_advogado").value;
-    const oab = document.getElementById("oab").value;
-    const estado = document.getElementById("estado").value;
-
-    const res = await fetch("/api/gerar-contestacao", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        session_file: sessionFile,
-        dados_advogado: { nome_advogado: nome, oab: oab, estado: estado },
-        corpo_gerado: corpoGerado
-      })
+      const data = await response.json();
+      if (response.ok) {
+        corpoGerado = data.corpo_gerado;
+        document.getElementById("preview-contestacao").textContent = corpoGerado;
+      } else {
+        alert("Erro na IA: " + data.erro);
+      }
     });
 
-    const resultado = document.getElementById("resultado");
-    const data = await res.json();
+    document.getElementById(
 
-    if (res.ok && data.files && data.files.word) {
-      resultado.classList.remove("d-none");
-      resultado.classList.replace("alert-danger", "alert-success");
-      resultado.innerHTML = `✅ Contestação gerada! <a class="btn btn-outline-dark ms-2" href="${data.files.word}" target="_blank"><i class="bi bi-download"></i> Baixar Word</a>`;
-    } else {
-      resultado.classList.remove("d-none");
-      resultado.classList.replace("alert-success", "alert-danger");
-      resultado.innerHTML = `❌ Erro: ${data.erro || "Erro ao gerar contestação"}`;
-    }
-  });
-</script>
-
-</body>
-</html>
 
