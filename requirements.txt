@@ -18,7 +18,7 @@ MarkupSafe==3.0.2
 
 # 📄 Manipulação de arquivos
 PyPDF2==3.0.1
-PyMuPDF==1.22.3         # ✅ versão mais estável com Python 3.13 + Docker
+PyMuPDF==1.21.1         # ✅ evita compilação, compatível com Render Free
 python-docx==1.1.2
 lxml==5.4.0
 
