@@ -70,22 +70,17 @@ def gerar_contestacao():
 
         client = OpenAI()
 
-        # OpenAI streaming para menor uso de memória
-        stream = client.chat.completions.create(
+        completion = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Você é um advogado especializado em direito civil, especialista em petições."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=1000,
-            stream=True
+            max_tokens=1000
         )
 
-        corpo_gerado = ""
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                corpo_gerado += chunk.choices[0].delta.content
+        corpo_gerado = completion.choices[0].message.content.strip()
 
         # Etapa 2: Substituição no modelo Word
         doc = Document(MODELO_PATH)
@@ -125,4 +120,3 @@ def gerar_contestacao():
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
-
