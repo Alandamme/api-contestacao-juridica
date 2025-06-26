@@ -1,117 +1,117 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Geração de Contestação Jurídica</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de Contestação Jurídica</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
-    body { background-color: #f8f9fa; }
-    .card-icon { font-size: 1.5rem; margin-right: 0.5rem; }
-    .form-section { margin-bottom: 2rem; }
-    .preview-box { white-space: pre-wrap; background: #fff; padding: 1rem; border: 1px solid #dee2e6; border-radius: 0.5rem; }
-    .placeholder-icon { color: #0d6efd; }
+    body {
+      background-color: #f4f6f9;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .card-custom {
+      border-left: 4px solid #0d6efd;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .form-section {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 0.5rem;
+    }
+    .section-title {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .icon-title {
+      color: #0d6efd;
+      margin-right: 0.5rem;
+    }
+    .result-box {
+      background: #fff;
+      border: 1px dashed #ccc;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      white-space: pre-wrap;
+    }
+    footer {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #888;
+      margin-top: 2rem;
+    }
   </style>
 </head>
 <body>
-  <div class="container py-5">
-    <h1 class="mb-4 text-center text-primary"><i class="fas fa-gavel"></i> Contestação Jurídica com IA</h1>
+<div class="container py-5">
+  <h2 class="text-center mb-4"><i class="fas fa-gavel"></i> Gerador de Contestação Jurídica</h2>
 
-    <!-- Upload do PDF -->
-    <div class="card shadow-sm form-section">
-      <div class="card-body">
-        <h5 class="card-title"><i class="fas fa-file-upload card-icon"></i>Upload da Petição Inicial (PDF)</h5>
-        <input type="file" id="pdfInput" class="form-control" accept="application/pdf">
-        <button class="btn btn-primary mt-3" onclick="enviarPDF()"><i class="fas fa-cloud-upload-alt"></i> Enviar PDF</button>
-      </div>
-    </div>
-
-    <!-- Dados do Advogado -->
-    <div class="card shadow-sm form-section">
-      <div class="card-body">
-        <h5 class="card-title"><i class="fas fa-user-tie card-icon"></i>Dados do Advogado</h5>
-        <div class="row g-3">
-          <div class="col-md-4">
-            <input type="text" id="nome_advogado" class="form-control" placeholder="Nome do Advogado">
-          </div>
-          <div class="col-md-4">
-            <input type="text" id="oab" class="form-control" placeholder="Número da OAB">
-          </div>
-          <div class="col-md-4">
-            <input type="text" id="estado" class="form-control" placeholder="Estado (UF)">
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Visualização dos dados extraídos -->
-    <div class="card shadow-sm form-section">
-      <div class="card-body">
-        <h5 class="card-title"><i class="fas fa-eye card-icon"></i>Visualização da Petição</h5>
-        <div id="previewDados" class="preview-box">Nenhum PDF enviado ainda.</div>
-      </div>
-    </div>
-
-    <!-- Geração da Contestação -->
-    <div class="card shadow-sm form-section">
-      <div class="card-body">
-        <h5 class="card-title"><i class="fas fa-robot card-icon"></i>Geração de Contestação</h5>
-        <button class="btn btn-success" onclick="gerarContestacao()"><i class="fas fa-file-word"></i> Gerar Contestação</button>
-      </div>
-    </div>
-
-    <!-- Resultado -->
-    <div class="card shadow-sm form-section" id="resultadoBox" style="display: none;">
-      <div class="card-body">
-        <h5 class="card-title"><i class="fas fa-download card-icon"></i>Download da Contestação</h5>
-        <a id="linkDownload" class="btn btn-outline-primary" target="_blank"><i class="fas fa-file-download"></i> Baixar Documento</a>
-      </div>
-    </div>
+  <div class="form-section mb-4">
+    <h4 class="section-title"><i class="fas fa-file-upload icon-title"></i> Upload da Petição Inicial (PDF)</h4>
+    <input type="file" id="pdfInput" class="form-control">
+    <button class="btn btn-primary mt-2" onclick="enviarPDF()"><i class="fas fa-upload"></i> Enviar PDF</button>
   </div>
 
-  <script>
-    let dadosExtraidos = null;
+  <div class="form-section mb-4">
+    <h4 class="section-title"><i class="fas fa-user-tie icon-title"></i> Dados do Advogado</h4>
+    <input type="text" id="nomeAdvogado" class="form-control mb-2" placeholder="Nome do Advogado">
+    <input type="text" id="oab" class="form-control mb-2" placeholder="Número da OAB">
+    <input type="text" id="estado" class="form-control mb-2" placeholder="Estado">
+  </div>
 
-    function enviarPDF() {
-      const pdfInput = document.getElementById('pdfInput').files[0];
-      const formData = new FormData();
-      formData.append("pdf", pdfInput);
+  <div class="form-section mb-4">
+    <h4 class="section-title"><i class="fas fa-eye icon-title"></i> Dados Extraídos</h4>
+    <div id="previewDados" class="result-box">Nenhum dado extraído ainda.</div>
+  </div>
 
-      fetch("/api/upload", { method: "POST", body: formData })
-        .then(resp => resp.json())
-        .then(data => {
-          dadosExtraidos = data.session_file;
-          document.getElementById("previewDados").innerText = JSON.stringify(data.session_file, null, 2);
-        })
-        .catch(err => alert("Erro ao enviar PDF: " + err));
+  <div class="text-center">
+    <button class="btn btn-success btn-lg" onclick="gerarContestacao()"><i class="fas fa-file-word"></i> Gerar Contestação</button>
+  </div>
+
+  <div class="form-section mt-4">
+    <h4 class="section-title"><i class="fas fa-download icon-title"></i> Resultado</h4>
+    <div id="resultadoLink">Aguardando geração...</div>
+  </div>
+
+  <footer>
+    &copy; 2025 Lopes Domingues. Todos os direitos reservados.
+  </footer>
+</div>
+
+<script>
+  let sessionFile = null;
+
+  async function enviarPDF() {
+    const input = document.getElementById('pdfInput');
+    const formData = new FormData();
+    formData.append('pdf', input.files[0]);
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    sessionFile = data.session_file;
+    document.getElementById('previewDados').innerText = JSON.stringify(sessionFile, null, 2);
+  }
+
+  async function gerarContestacao() {
+    const dados_advogado = {
+      nome_advogado: document.getElementById('nomeAdvogado').value,
+      oab: document.getElementById('oab').value,
+      estado: document.getElementById('estado').value
+    };
+
+    const res = await fetch('/api/gerar-contestacao', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ session_file: sessionFile, dados_advogado })
+    });
+
+    const resultado = await res.json();
+    if (resultado.files) {
+      document.getElementById('resultadoLink').innerHTML = `<a href="${resultado.files.word}" class="btn btn-outline-primary" target="_blank">📄 Baixar Contestação Gerada</a>`;
+    } else {
+      document.getElementById('resultadoLink').innerText = resultado.erro || 'Erro na geração';
     }
-
-    function gerarContestacao() {
-      if (!dadosExtraidos) return alert("Envie o PDF primeiro.");
-
-      const dadosAdv = {
-        nome_advogado: document.getElementById("nome_advogado").value,
-        oab: document.getElementById("oab").value,
-        estado: document.getElementById("estado").value
-      };
-
-      fetch("/api/gerar-contestacao", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_file: dadosExtraidos, dados_advogado: dadosAdv })
-      })
-      .then(resp => resp.json())
-      .then(data => {
-        if (data.files && data.files.word) {
-          document.getElementById("resultadoBox").style.display = "block";
-          document.getElementById("linkDownload").href = data.files.word;
-        } else {
-          alert("Erro: " + (data.erro || "Não foi possível gerar a contestação."));
-        }
-      })
-      .catch(err => alert("Erro ao gerar contestação: " + err));
-    }
-  </script>
+  }
+</script>
 </body>
 </html>
