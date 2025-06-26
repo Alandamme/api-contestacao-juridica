@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, request, jsonify, url_for
+from flask import Blueprint, request, jsonify, url_for, current_app
 from werkzeug.utils import secure_filename
 from docx import Document
 from datetime import datetime
@@ -9,8 +9,8 @@ from openai import OpenAI
 contestacao_bp = Blueprint("contestacao", __name__)
 pdf_processor = PDFProcessor()
 
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
-MODELO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "modelos", "modelo_contestacao_com_placeholders_pronto.docx")
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+MODELO_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "modelos", "modelo_contestacao_com_placeholders_pronto.docx")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -29,15 +29,14 @@ def upload_pdf():
 
     try:
         dados_extraidos = pdf_processor.process_pdf(file_path)
-        # Deixe autor e réu em branco para o frontend preencher manualmente se necessário
-        dados_extraidos["autor"] = ""
-        dados_extraidos["reu"] = ""
-        return jsonify({"dados_extraidos": dados_extraidos, "session_file": dados_extraidos}), 200
+        return jsonify({
+            "dados_extraidos": dados_extraidos,
+            "session_file": dados_extraidos
+        }), 200
     except Exception as e:
-        print(f"Erro ao processar PDF: {e}")
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
 
-@contestacao_bp.route("/api/gerar-contestacao", methods=["POST"])
+@contestacao_bp.route("/gerar-contestacao", methods=["POST"])
 def gerar_contestacao():
     data = request.json
     if not data:
@@ -50,11 +49,12 @@ def gerar_contestacao():
         return jsonify({"erro": "Dados incompletos para gerar contestação"}), 400
 
     try:
+        # Etapa 1: Gerar corpo da contestação com IA
         prompt = f"""
         Elabore uma contestação jurídica completa, considerando os seguintes elementos extraídos da petição inicial:
 
-        - Autor: {dados_peticao.get("autor", "NÃO INFORMADO")}
-        - Réu: {dados_peticao.get("reu", "NÃO INFORMADO")}
+        - Autor: {dados_peticao.get("autor", "")}
+        - Réu: {dados_peticao.get("reu", "")}
         - Tipo de Ação: {dados_peticao.get("tipo_acao", "")}
         - Valor da Causa: {dados_peticao.get("valor_causa", "")}
 
@@ -88,12 +88,12 @@ def gerar_contestacao():
             if chunk.choices[0].delta.content:
                 corpo_gerado += chunk.choices[0].delta.content
 
-        # Etapa 2: Substituição no modelo Word
+        # Etapa 2: Preencher o modelo Word
         doc = Document(MODELO_PATH)
 
         placeholders = {
-            "{{AUTOR}}": dados_peticao.get("autor", "AUTOR NÃO INFORMADO"),
-            "{{REU}}": dados_peticao.get("reu", "RÉU NÃO INFORMADO"),
+            "{{AUTOR}}": dados_peticao.get("autor", ""),
+            "{{REU}}": dados_peticao.get("reu", ""),
             "{{TIPO_ACAO}}": dados_peticao.get("tipo_acao", ""),
             "{{VALOR_CAUSA}}": dados_peticao.get("valor_causa", ""),
             "{{RESUMO_FATOS}}": dados_peticao.get("fatos", ""),
@@ -123,7 +123,7 @@ def gerar_contestacao():
         }), 200
 
     except Exception as e:
-        print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+
 
 
