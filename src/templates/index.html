@@ -32,6 +32,21 @@
     <div class="card-body" id="dados-extraidos-preview"></div>
   </div>
 
+  <!-- Botão testar IA -->
+  <div class="d-grid gap-2 mt-4 d-none" id="testar-ia-container">
+    <button id="testar-ia-btn" class="btn btn-outline-secondary">
+      <i class="bi bi-robot"></i> Testar IA (Prévia da Contestação)
+    </button>
+  </div>
+
+  <!-- Pré-visualização -->
+  <div class="card mt-4 d-none" id="preview-card">
+    <div class="card-header"><i class="bi bi-chat-left-dots-fill"></i> Pré-visualização da Contestação</div>
+    <div class="card-body">
+      <pre id="preview-texto" class="bg-light border p-3 rounded" style="white-space: pre-wrap; max-height: 400px; overflow-y: auto;"></pre>
+    </div>
+  </div>
+
   <!-- Dados do advogado -->
   <div class="card mb-4 d-none" id="advogado-card">
     <div class="card-header"><i class="bi bi-person-badge"></i> Dados do Advogado</div>
@@ -60,13 +75,14 @@
 
 <script>
   let sessionFile = null;
+  let corpoGerado = null;
 
   document.getElementById("upload-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const status = document.getElementById("upload-status");
     status.innerHTML = "⌛ Enviando arquivo...";
-    
+
     const res = await fetch("/api/upload", { method: "POST", body: formData });
     const data = await res.json();
 
@@ -83,12 +99,43 @@
         <p><strong>Pedidos:</strong> <ul>${sessionFile.pedidos.map(p => `<li>${p}</li>`).join("")}</ul></p>
         <p><strong>Fundamentos Jurídicos:</strong> <ul>${sessionFile.fundamentos_juridicos.map(f => `<li>${f}</li>`).join("")}</ul></p>
       `;
+
       document.getElementById("dados-extraidos-card").classList.remove("d-none");
       document.getElementById("advogado-card").classList.remove("d-none");
+      document.getElementById("testar-ia-container").classList.remove("d-none");
       status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Dados extraídos com sucesso!</span>';
     } else {
-      status.innerHTML = '<span class="text-danger">Erro ao processar PDF</span>';
+      status.innerHTML = '<span class="text-danger">❌ Erro ao processar PDF</span>';
     }
+  });
+
+  document.getElementById("testar-ia-btn").addEventListener("click", async () => {
+    const btn = document.getElementById("testar-ia-btn");
+    const previewCard = document.getElementById("preview-card");
+    const previewTexto = document.getElementById("preview-texto");
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-robot"></i> Gerando com IA...';
+
+    const res = await fetch("/api/testar-ia", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_file: sessionFile })
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.corpo_gerado) {
+      corpoGerado = data.corpo_gerado;
+      previewTexto.textContent = corpoGerado;
+    } else {
+      corpoGerado = null;
+      previewTexto.textContent = `❌ Erro: ${data.erro || "Erro ao gerar prévia da IA"}`;
+    }
+
+    previewCard.classList.remove("d-none");
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-robot"></i> Testar IA (Prévia da Contestação)';
   });
 
   document.getElementById("advogado-form").addEventListener("submit", async (e) => {
@@ -102,7 +149,8 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         session_file: sessionFile,
-        dados_advogado: { nome_advogado: nome, oab: oab, estado: estado }
+        dados_advogado: { nome_advogado: nome, oab: oab, estado: estado },
+        corpo_gerado: corpoGerado
       })
     });
 
@@ -111,6 +159,7 @@
 
     if (res.ok && data.files && data.files.word) {
       resultado.classList.remove("d-none");
+      resultado.classList.replace("alert-danger", "alert-success");
       resultado.innerHTML = `✅ Contestação gerada! <a class="btn btn-outline-dark ms-2" href="${data.files.word}" target="_blank"><i class="bi bi-download"></i> Baixar Word</a>`;
     } else {
       resultado.classList.remove("d-none");
