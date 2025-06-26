@@ -12,6 +12,10 @@ def testar_ia():
         return jsonify({"erro": "Dados da petição ausentes"}), 400
 
     try:
+        # Converte listas em texto plano para o prompt
+        pedidos = "; ".join(dados_peticao.get("pedidos", []))
+        fundamentos = "; ".join(dados_peticao.get("fundamentos_juridicos", []))
+
         prompt = f"""
         Elabore uma contestação jurídica considerando os seguintes dados:
 
@@ -24,12 +28,12 @@ def testar_ia():
         {dados_peticao.get("fatos", "")}
 
         Pedidos:
-        {dados_peticao.get("pedidos", [])}
+        {pedidos}
 
         Fundamentos Jurídicos:
-        {dados_peticao.get("fundamentos_juridicos", [])}
+        {fundamentos}
 
-        Escreva a contestação com linguagem clara e técnica.
+        Escreva a contestação com linguagem clara, coesa, técnica e argumentativa.
         """
 
         client = OpenAI()
@@ -49,5 +53,4 @@ def testar_ia():
     except Exception as e:
         print("Erro ao gerar texto:", e)
         return jsonify({"erro": str(e)}), 500
-
 
