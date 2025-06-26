@@ -11,7 +11,6 @@ pdf_processor = PDFProcessor()
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
 MODELO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "modelos", "modelo_contestacao_com_placeholders_pronto.docx")
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @contestacao_bp.route("/upload", methods=["POST"])
@@ -29,16 +28,22 @@ def upload_pdf():
 
     try:
         dados_extraidos = pdf_processor.process_pdf(file_path)
-        return jsonify({"dados_extraidos": dados_extraidos, "session_file": dados_extraidos}), 200
+        return jsonify({
+            "dados_extraidos": dados_extraidos,
+            "session_file": dados_extraidos
+        }), 200
     except Exception as e:
         print(f"Erro ao processar PDF: {e}")
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
 
 @contestacao_bp.route("/testar-ia", methods=["POST"])
 def testar_ia():
-    data = request.json
-    dados_peticao = data.get("session_file")
+    try:
+        data = request.get_json(force=True)
+    except Exception as e:
+        return jsonify({"erro": "Erro ao ler JSON: " + str(e)}), 400
 
+    dados_peticao = data.get("session_file")
     if not dados_peticao:
         return jsonify({"erro": "Dados da petição ausentes"}), 400
 
@@ -70,8 +75,8 @@ def testar_ia():
                 {"role": "system", "content": "Você é um advogado especializado em direito civil, especialista em petições."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.7,
-            max_tokens=1000
+            temperature=0.5,
+            max_tokens=800
         )
 
         corpo_gerado = completion.choices[0].message.content.strip()
@@ -83,9 +88,10 @@ def testar_ia():
 
 @contestacao_bp.route("/gerar-contestacao", methods=["POST"])
 def gerar_contestacao():
-    data = request.json
-    if not data:
-        return jsonify({"erro": "JSON ausente"}), 400
+    try:
+        data = request.get_json(force=True)
+    except Exception as e:
+        return jsonify({"erro": "Erro ao ler JSON: " + str(e)}), 400
 
     dados_peticao = data.get("session_file")
     dados_advogado = data.get("dados_advogado")
@@ -103,18 +109,18 @@ def gerar_contestacao():
             "{{TIPO_ACAO}}": dados_peticao.get("tipo_acao", ""),
             "{{VALOR_CAUSA}}": dados_peticao.get("valor_causa", ""),
             "{{RESUMO_FATOS}}": dados_peticao.get("fatos", ""),
-            "{{PEDIDOS}}": "\n".join(f"- {p}" for p in dados_peticao.get("pedidos", [])),
-            "{{FUNDAMENTOS_JURIDICOS}}": "\n".join(f"- {f}" for f in dados_peticao.get("fundamentos_juridicos", [])),
+            "{{PEDIDOS}}": "\n".join(f"- {p}" for p in dados_peticao.get("pedidos") or []),
+            "{{FUNDAMENTOS_JURIDICOS}}": "\n".join(f"- {f}" for f in dados_peticao.get("fundamentos_juridicos") or []),
             "{{NOME_ADVOGADO}}": dados_advogado.get("nome_advogado", ""),
             "{{OAB}}": dados_advogado.get("oab", ""),
             "{{ESTADO}}": dados_advogado.get("estado", ""),
             "{{CONTESTACAO_IA}}": corpo_gerado
         }
 
-        for paragraph in doc.paragraphs:
-            for key, value in placeholders.items():
-                if key in paragraph.text:
-                    paragraph.text = paragraph.text.replace(key, value)
+        for p in doc.paragraphs:
+            for key, val in placeholders.items():
+                if key in p.text:
+                    p.text = p.text.replace(key, val)
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_{timestamp}.docx"
@@ -127,11 +133,6 @@ def gerar_contestacao():
                 "word": url_for("download_file", filename=output_filename, _external=True)
             }
         }), 200
-
-    except Exception as e:
-        print(f"Erro ao gerar contestação: {e}")
-        return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
-
 
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
