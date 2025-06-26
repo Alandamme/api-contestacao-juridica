@@ -70,6 +70,7 @@ def gerar_contestacao():
 
         client = OpenAI()
 
+        # Sem streaming para evitar estouro de memória
         completion = client.chat.completions.create(
             model="gpt-4",
             messages=[
@@ -77,7 +78,8 @@ def gerar_contestacao():
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=1000
+            max_tokens=1000,
+            stream=False
         )
 
         corpo_gerado = completion.choices[0].message.content.strip()
@@ -120,3 +122,4 @@ def gerar_contestacao():
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+
