@@ -1,161 +1,140 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gerador de Contestação Jurídica com IA</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerador de Contestação Jurídica</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
   <style>
     body {
-      background: linear-gradient(180deg, #f0f4f8 0%, #ffffff 100%);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    .section-title i {
-      color: #0d6efd;
-      margin-right: 8px;
+      background: #f9f9f9;
     }
     .card {
       border-radius: 1rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     }
-    .output-json {
-      white-space: pre-wrap;
-      background-color: #f8f9fa;
+    pre {
+      background: #f1f1f1;
       padding: 1rem;
-      border-left: 4px solid #0d6efd;
       border-radius: 0.5rem;
-      font-size: 0.95rem;
-      color: #343a40;
     }
-    summary {
-      cursor: pointer;
-      font-weight: 500;
-    }
-    .btn {
-      border-radius: 2rem;
-    }
-    .btn i {
-      margin-right: 6px;
+    .icon-title i {
+      color: #0d6efd;
+      margin-right: 0.5rem;
     }
   </style>
 </head>
 <body>
-  <div class="container py-5">
-    <h1 class="mb-5 text-center text-primary"><i class="fas fa-scale-balanced"></i> Gerador de Contestação Jurídica com IA</h1>
+  <div class="container mt-4">
+    <h1 class="text-center mb-4"><i class="fas fa-scale-balanced me-2"></i>Contestação Jurídica Automatizada</h1>
 
     <!-- Upload -->
-    <div class="card">
-      <div class="card-header section-title bg-primary text-white">
-        <i class="fas fa-file-upload"></i> 1. Enviar Petição Inicial (PDF)
-      </div>
+    <div class="card mb-4">
       <div class="card-body">
-        <form id="uploadForm">
-          <input type="file" class="form-control" name="pdf" accept="application/pdf" required />
-          <button class="btn btn-primary mt-3 w-100" type="submit"><i class="fas fa-upload"></i> Enviar PDF</button>
-        </form>
-        <div id="uploadStatus" class="mt-3"></div>
+        <h5 class="icon-title"><i class="fas fa-file-upload"></i>1. Envie a Petição Inicial (PDF)</h5>
+        <input type="file" id="pdfInput" class="form-control my-3" accept="application/pdf" />
+        <button class="btn btn-primary w-100" onclick="uploadPDF()"><i class="fas fa-cloud-upload-alt"></i> Extrair Dados</button>
       </div>
     </div>
 
     <!-- Dados extraídos -->
-    <div class="card d-none" id="dadosCard">
-      <div class="card-header section-title bg-secondary text-white">
-        <i class="fas fa-file-lines"></i> 2. Dados Extraídos da Petição
-      </div>
+    <div class="card mb-4" id="dadosExtraidosCard" style="display: none;">
       <div class="card-body">
-        <details>
-          <summary class="text-primary mb-2">Visualizar dados extraídos</summary>
-          <div id="dadosExtraidos" class="output-json mt-2"></div>
-        </details>
+        <h5 class="icon-title"><i class="fas fa-eye"></i>2. Dados extraídos da Petição</h5>
+        <div id="dadosExtraidos"></div>
       </div>
     </div>
 
     <!-- Dados do advogado -->
-    <div class="card d-none" id="formCard">
-      <div class="card-header section-title bg-info text-white">
-        <i class="fas fa-user-tie"></i> 3. Dados do Advogado
-      </div>
+    <div class="card mb-4">
       <div class="card-body">
-        <form id="contestacaoForm">
-          <input type="text" class="form-control mb-2" name="nome" placeholder="Nome do Advogado" required>
-          <input type="text" class="form-control mb-2" name="oab" placeholder="Número da OAB" required>
-          <input type="text" class="form-control mb-3" name="estado" placeholder="Estado da OAB (ex: SP)" required>
-          <button type="submit" class="btn btn-success w-100"><i class="fas fa-gavel"></i> Gerar Contestação</button>
-        </form>
-        <div id="gerarStatus" class="mt-3"></div>
+        <h5 class="icon-title"><i class="fas fa-user-tie"></i>3. Dados do Advogado</h5>
+        <input type="text" id="nome_advogado" class="form-control my-2" placeholder="Nome do Advogado" />
+        <input type="text" id="oab" class="form-control my-2" placeholder="Número da OAB" />
+        <input type="text" id="estado" class="form-control my-2" placeholder="Estado" />
       </div>
     </div>
 
-    <!-- Resultado -->
-    <div class="card d-none" id="resultadoCard">
-      <div class="card-header section-title bg-success text-white">
-        <i class="fas fa-file-word"></i> 4. Contestação Gerada
-      </div>
-      <div class="card-body text-center">
-        <p id="previewText"></p>
-        <a id="linkDocx" class="btn btn-outline-primary mt-2" target="_blank">
-          <i class="fas fa-download"></i> Baixar Contestação (.docx)
-        </a>
+    <!-- Botões -->
+    <div class="d-flex gap-2 mb-3">
+      <button class="btn btn-warning flex-fill" onclick="testarIA()">
+        <i class="fas fa-brain"></i> Testar IA Jurídica
+      </button>
+      <button class="btn btn-success flex-fill" onclick="gerarContestacao()">
+        <i class="fas fa-file-word"></i> Gerar Contestação Final
+      </button>
+    </div>
+
+    <!-- Visualização da IA -->
+    <div class="card mb-4" id="previewIA" style="display: none;">
+      <div class="card-body">
+        <h5 class="icon-title"><i class="fas fa-scroll"></i>Corpo gerado pela IA:</h5>
+        <pre id="iaOutput"></pre>
       </div>
     </div>
   </div>
 
   <script>
-    let extractedPdfData = null;
+    let sessionFile = null;
+    let iaCorpo = "";
 
-    document.getElementById("uploadForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const formData = new FormData(e.target);
-      const status = document.getElementById("uploadStatus");
-      status.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Processando...";
+    async function uploadPDF() {
+      const input = document.getElementById('pdfInput');
+      if (!input.files.length) return alert("Selecione um PDF primeiro.");
+      const formData = new FormData();
+      formData.append("pdf", input.files[0]);
 
-      try {
-        const res = await fetch("/api/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.erro || "Erro desconhecido");
-
-        extractedPdfData = data.dados_extraidos;
-        document.getElementById("dadosExtraidos").innerText = JSON.stringify(extractedPdfData, null, 2);
-        document.getElementById("dadosCard").classList.remove("d-none");
-        document.getElementById("formCard").classList.remove("d-none");
-        status.innerHTML = "<span class='text-success'><i class='fas fa-check-circle'></i> Petição analisada com sucesso.</span>";
-      } catch (err) {
-        status.innerHTML = `<span class='text-danger'><i class='fas fa-times-circle'></i> Erro ao enviar PDF: ${err.message}</span>`;
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData
+      });
+      const data = await response.json();
+      if (data.dados_extraidos) {
+        sessionFile = data.session_file;
+        document.getElementById('dadosExtraidosCard').style.display = "block";
+        document.getElementById('dadosExtraidos').innerText = JSON.stringify(data.dados_extraidos, null, 2);
+      } else {
+        alert("Erro ao processar PDF.");
       }
-    });
+    }
 
-    document.getElementById("contestacaoForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const status = document.getElementById("gerarStatus");
-      status.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Gerando contestação...";
+    async function testarIA() {
+      if (!sessionFile) return alert("Extraia o PDF primeiro.");
+      const response = await fetch("/api/testar-ia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_file: sessionFile })
+      });
+      const data = await response.json();
+      if (data.corpo_gerado) {
+        iaCorpo = data.corpo_gerado;
+        document.getElementById('previewIA').style.display = "block";
+        document.getElementById('iaOutput').innerText = iaCorpo;
+      } else {
+        alert("Erro ao testar IA.");
+      }
+    }
 
-      const dadosAdvogado = {
-        nome_advogado: form.nome.value,
-        oab: form.oab.value,
-        estado: form.estado.value,
+    async function gerarContestacao() {
+      if (!sessionFile) return alert("Extraia o PDF primeiro.");
+      const dados_advogado = {
+        nome_advogado: document.getElementById('nome_advogado').value,
+        oab: document.getElementById('oab').value,
+        estado: document.getElementById('estado').value
       };
-
-      try {
-        const res = await fetch("/api/gerar-contestacao", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_file: extractedPdfData, dados_advogado: dadosAdvogado }),
-        });
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.erro || "Erro desconhecido");
-
-        document.getElementById("previewText").innerText = data.message;
-        document.getElementById("linkDocx").href = data.files.word;
-        document.getElementById("resultadoCard").classList.remove("d-none");
-        status.innerHTML = "<span class='text-success'><i class='fas fa-check-circle'></i> Contestação gerada com sucesso.</span>";
-      } catch (err) {
-        status.innerHTML = `<span class='text-danger'><i class='fas fa-times-circle'></i> Erro: ${err.message}</span>`;
+      const response = await fetch("/api/gerar-contestacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_file: sessionFile, dados_advogado, corpo_gerado: iaCorpo || undefined })
+      });
+      const data = await response.json();
+      if (data.files && data.files.word) {
+        window.open(data.files.word, "_blank");
+      } else {
+        alert("Erro ao gerar contestação.");
       }
-    });
+    }
   </script>
 </body>
 </html>
