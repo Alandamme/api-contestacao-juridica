@@ -11,7 +11,9 @@ pdf_processor = PDFProcessor()
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
 MODELO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "modelos", "modelo_contestacao_com_placeholders_pronto.docx")
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 @contestacao_bp.route("/upload", methods=["POST"])
 def upload_pdf():
@@ -33,42 +35,41 @@ def upload_pdf():
         print(f"Erro ao processar PDF: {e}")
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
 
-@contestacao_bp.route("/testar-ia", methods=["POST"])
-def testar_ia_contestacao():
-    data = request.json
-    if not data:
-        return jsonify({"erro": "JSON ausente"}), 400
 
+@contestacao_bp.route("/testar-ia", methods=["POST"])
+def testar_ia():
+    data = request.json
     dados_peticao = data.get("session_file")
+
     if not dados_peticao:
         return jsonify({"erro": "Dados da petição ausentes"}), 400
 
+    prompt = f"""
+    Elabore uma contestação jurídica completa, considerando os seguintes elementos extraídos da petição inicial:
+
+    - Autor: {dados_peticao.get("autor", "")}
+    - Réu: {dados_peticao.get("reu", "")}
+    - Tipo de Ação: {dados_peticao.get("tipo_acao", "")}
+    - Valor da Causa: {dados_peticao.get("valor_causa", "")}
+
+    Resumo dos fatos:
+    {dados_peticao.get("fatos", "")}
+
+    Pedidos do autor:
+    {dados_peticao.get("pedidos", [])}
+
+    Fundamentos jurídicos apresentados:
+    {dados_peticao.get("fundamentos_juridicos", [])}
+
+    Gere uma contestação técnica, clara e fundamentada com base nessas informações.
+    """
+
     try:
-        prompt = f"""
-        Elabore uma contestação jurídica completa, considerando os seguintes elementos extraídos da petição inicial:
-
-        - Autor: {dados_peticao.get("autor", "")}
-        - Réu: {dados_peticao.get("reu", "")}
-        - Tipo de Ação: {dados_peticao.get("tipo_acao", "")}
-        - Valor da Causa: {dados_peticao.get("valor_causa", "")}
-
-        Resumo dos fatos:
-        {dados_peticao.get("fatos", "")}
-
-        Pedidos do autor:
-        {dados_peticao.get("pedidos", [])}
-
-        Fundamentos jurídicos apresentados:
-        {dados_peticao.get("fundamentos_juridicos", [])}
-
-        Gere uma contestação técnica, clara e fundamentada com base nessas informações.
-        """
-
         client = OpenAI()
         stream = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Você é um advogado especializado em direito civil, especialista em petições."},
+                {"role": "system", "content": "Você é um advogado especializado em direito civil."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
@@ -81,23 +82,21 @@ def testar_ia_contestacao():
             if chunk.choices[0].delta.content:
                 corpo_gerado += chunk.choices[0].delta.content
 
-        return jsonify({"corpo_ia": corpo_gerado.strip()}), 200
+        return jsonify({"corpo_gerado": corpo_gerado}), 200
 
     except Exception as e:
-        print(f"Erro ao gerar IA: {e}")
-        return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+        print(f"Erro na geração com IA: {e}")
+        return jsonify({"erro": str(e)}), 500
+
 
 @contestacao_bp.route("/gerar-contestacao", methods=["POST"])
 def gerar_contestacao():
     data = request.json
-    if not data:
-        return jsonify({"erro": "JSON ausente"}), 400
-
     dados_peticao = data.get("session_file")
     dados_advogado = data.get("dados_advogado")
-    corpo_ia = data.get("corpo_ia")
+    corpo_gerado = data.get("corpo_gerado")
 
-    if not dados_peticao or not dados_advogado or not corpo_ia:
+    if not dados_peticao or not dados_advogado or not corpo_gerado:
         return jsonify({"erro": "Dados incompletos para gerar contestação"}), 400
 
     try:
@@ -114,7 +113,7 @@ def gerar_contestacao():
             "{{NOME_ADVOGADO}}": dados_advogado.get("nome_advogado", ""),
             "{{OAB}}": dados_advogado.get("oab", ""),
             "{{ESTADO}}": dados_advogado.get("estado", ""),
-            "{{CONTESTACAO_IA}}": corpo_ia
+            "{{CONTESTACAO_IA}}": corpo_gerado
         }
 
         for paragraph in doc.paragraphs:
@@ -136,4 +135,5 @@ def gerar_contestacao():
 
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
-        return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+        return jsonify({"erro": str(e)}), 500
+
