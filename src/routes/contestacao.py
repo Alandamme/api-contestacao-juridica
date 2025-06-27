@@ -10,8 +10,7 @@ contestacao_bp = Blueprint("contestacao", __name__)
 pdf_processor = PDFProcessor()
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
-MODELO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "modelos", "modelo_contestacao_com_placeholders_pronto.docx")
-
+MODELO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "modelos", "modelo_contestacao_com_placeholders_pronto.docx")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @contestacao_bp.route("/upload", methods=["POST"])
@@ -47,29 +46,38 @@ def gerar_contestacao():
         return jsonify({"erro": "Dados incompletos para gerar contestação"}), 400
 
     try:
-        # Etapa 1: Geração do corpo com IA jurídica
         prompt = f"""
-        Elabore uma contestação jurídica completa, considerando os seguintes elementos extraídos da petição inicial:
+        Você é um advogado cível especialista em elaboração de contestações.
 
-        - Autor: {dados_peticao.get("autor", "")}
-        - Réu: {dados_peticao.get("reu", "")}
+        Com base nos dados extraídos da petição inicial abaixo, redija uma contestação completa, organizada por tópicos. Refaça ponto a ponto os argumentos trazidos pelo autor, rebatendo com fundamentos jurídicos sólidos, técnicos e atuais, sem inventar jurisprudência.
+
+        - Autor: {dados_peticao.get("autor", "NOME DO AUTOR NÃO DETECTADO")}
+        - Réu: {dados_peticao.get("reu", "NOME DO RÉU NÃO DETECTADO")}
         - Tipo de Ação: {dados_peticao.get("tipo_acao", "")}
         - Valor da Causa: {dados_peticao.get("valor_causa", "")}
 
-        Resumo dos fatos:
+        Resumo dos fatos (segundo o autor):
         {dados_peticao.get("fatos", "")}
 
         Pedidos do autor:
         {dados_peticao.get("pedidos", [])}
 
-        Fundamentos jurídicos apresentados:
+        Fundamentos jurídicos alegados pelo autor:
         {dados_peticao.get("fundamentos_juridicos", [])}
 
-        Gere uma contestação técnica, clara e fundamentada com base nessas informações.
+        Estruture sua resposta da seguinte forma:
+        1. Breve Síntese da Petição Inicial
+        2. Preliminares (se houver)
+        3. Impugnação dos Fatos
+        4. Impugnação dos Fundamentos Jurídicos
+        5. Direito Aplicável ao Caso
+        6. Pedido Final de Improcedência
+        7. Requerimentos
+
+        Seja claro, técnico e preciso, utilizando linguagem jurídica atual e objetiva.
         """
 
         client = OpenAI()
-
         stream = client.chat.completions.create(
             model="gpt-4",
             messages=[
@@ -86,12 +94,12 @@ def gerar_contestacao():
             if chunk.choices[0].delta.content:
                 corpo_gerado += chunk.choices[0].delta.content
 
-        # Etapa 2: Substituição no modelo Word
+        # Substituição dos placeholders no modelo Word
         doc = Document(MODELO_PATH)
 
         placeholders = {
-            "{{AUTOR}}": dados_peticao.get("autor", ""),
-            "{{REU}}": dados_peticao.get("reu", ""),
+            "{{AUTOR}}": dados_peticao.get("autor", "NOME DO AUTOR NÃO DETECTADO"),
+            "{{REU}}": dados_peticao.get("reu", "NOME DO RÉU NÃO DETECTADO"),
             "{{TIPO_ACAO}}": dados_peticao.get("tipo_acao", ""),
             "{{VALOR_CAUSA}}": dados_peticao.get("valor_causa", ""),
             "{{RESUMO_FATOS}}": dados_peticao.get("fatos", ""),
@@ -108,7 +116,6 @@ def gerar_contestacao():
                 if key in paragraph.text:
                     paragraph.text = paragraph.text.replace(key, value)
 
-        # Salvar o arquivo gerado
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_{timestamp}.docx"
         output_path = os.path.join(UPLOAD_FOLDER, output_filename)
@@ -124,7 +131,5 @@ def gerar_contestacao():
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
-
-
 
 
