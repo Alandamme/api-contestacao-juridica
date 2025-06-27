@@ -1,83 +1,69 @@
-import PyPDF2
 import os
-import json
-from openai import OpenAI
+import openai
+from PyPDF2 import PdfReader
 
 class PDFProcessor:
-    """
-    Processa PDFs de petições iniciais e extrai informações para a contestação usando IA.
-    """
-
     def __init__(self):
-        self.extracted_data = {}
-        self.client = OpenAI()
+        self.client = openai.OpenAI()
 
-    def extract_text_from_pdf(self, file_path: str) -> str:
-        try:
-            with open(file_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                text = ""
-                for page in pdf_reader.pages:
-                    page_text = page.extract_text()
-                    if page_text:
-                        text += page_text + "\n"
-                return text
-        except Exception as e:
-            raise Exception(f"Erro ao extrair texto do PDF: {str(e)}")
+    def extract_text_from_pdf(self, file_path):
+        reader = PdfReader(file_path)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+        return text
 
-    def process_pdf(self, file_path: str) -> dict:
-        try:
-            text = self.extract_text_from_pdf(file_path)
-            dados_extraidos = self.extract_data_with_ai(text)
-            dados_extraidos['texto_completo'] = text
-            self.extracted_data = dados_extraidos
-            return dados_extraidos
-        except Exception as e:
-            raise Exception(f"Erro no processamento do PDF: {str(e)}")
+    def process_pdf(self, file_path):
+        texto_peticao = self.extract_text_from_pdf(file_path)
 
-    def extract_data_with_ai(self, text: str) -> dict:
         prompt = f"""
-Você é um assistente jurídico especializado em petições iniciais brasileiras.
+Você é um assistente jurídico especializado em Direito Civil. Analise o texto de uma petição inicial e extraia de forma precisa os seguintes dados jurídicos, sem inventar informações:
 
-Extraia e retorne em JSON os seguintes campos (preencha o máximo possível):
+1. Nome do AUTOR (parte que ajuizou a ação)
+2. Nome do RÉU (parte demandada)
+3. Tipo de ação judicial
+4. Valor da causa (se houver menção)
+5. Fatos apresentados (resuma de forma organizada)
+6. Pedidos do autor (em tópicos objetivos)
+7. Fundamentos jurídicos apresentados (resuma as teses e artigos mencionados)
 
-- autor: Nome completo, qualificação e endereço do autor
-- reu: Nome completo, qualificação e endereço do réu
-- tipo_acao: Tipo da ação (por extenso)
-- valor_causa: Valor da causa, apenas o número
-- fatos: Resumo dos fatos principais
-- pedidos: Lista dos pedidos do autor (array)
-- fundamentos_juridicos: Lista de artigos de lei, jurisprudências, fundamentos invocados
-
-Se não encontrar, deixe o campo como "" ou [], nunca escreva "não identificado".
-
-Texto da petição inicial:
+Texto da petição:
 \"\"\"
-{text}
+{texto_peticao}
 \"\"\"
 
-Responda SOMENTE com o JSON.
-"""
+Retorne um JSON no seguinte formato:
 
-        response = self.client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "Você é um assistente jurídico extrator de dados."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=2000,
-            temperature=0.0
-        )
-
-        resposta_texto = response.choices[0].message.content
+{{
+  "autor": "...",
+  "reu": "...",
+  "tipo_acao": "...",
+  "valor_causa": "...",
+  "fatos": "...",
+  "pedidos": ["...", "..."],
+  "fundamentos_juridicos": ["...", "..."]
+}}
+        """
 
         try:
-            dados = json.loads(resposta_texto)
-        except Exception:
-            try:
-                resposta_texto = resposta_texto[resposta_texto.find("{"):resposta_texto.rfind("}")+1]
-                dados = json.loads(resposta_texto)
-            except Exception as e:
-                raise Exception(f"Erro ao interpretar resposta JSON: {str(e)}\nResposta:\n{resposta_texto}")
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "Você é um jurista responsável por interpretar petições iniciais com clareza técnica e exatidão."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=1500
+            )
 
-        return dados
+            content = response.choices[0].message.content.strip()
+
+            # Avaliação extra: segurança na conversão JSON
+            import json
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                raise ValueError("A resposta da IA não retornou um JSON válido.")
+
+        except Exception as e:
+            raise RuntimeError(f"Erro ao analisar o PDF com IA: {e}")
