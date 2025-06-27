@@ -1,39 +1,41 @@
 import os
-import openai
+import re
+import json
+from openai import OpenAI
 from PyPDF2 import PdfReader
 
 class PDFProcessor:
     def __init__(self):
-        self.client = openai.OpenAI()
+        self.client = OpenAI()
 
     def extract_text_from_pdf(self, file_path):
-        reader = PdfReader(file_path)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text()
-        return text
+        try:
+            reader = PdfReader(file_path)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() or ""
+            return text.strip()
+        except Exception as e:
+            raise Exception(f"Erro ao extrair texto do PDF: {e}")
 
-    def process_pdf(self, file_path):
-        texto_peticao = self.extract_text_from_pdf(file_path)
+    def reduzir_texto(self, texto, limite=5000):
+        if len(texto) > limite:
+            return texto[:limite] + "\n[Texto truncado por limite de tokens]"
+        return texto
 
+    def analyze_pdf_with_ai(self, pdf_text):
         prompt = f"""
-Você é um assistente jurídico especializado em Direito Civil. Analise o texto de uma petição inicial e extraia de forma precisa os seguintes dados jurídicos, sem inventar informações:
+Você é um advogado especialista em direito cível. Analise o texto da petição inicial abaixo e extraia as seguintes informações de forma clara e objetiva, organizadas em formato JSON:
 
-1. Nome do AUTOR (parte que ajuizou a ação)
-2. Nome do RÉU (parte demandada)
-3. Tipo de ação judicial
-4. Valor da causa (se houver menção)
-5. Fatos apresentados (resuma de forma organizada)
-6. Pedidos do autor (em tópicos objetivos)
-7. Fundamentos jurídicos apresentados (resuma as teses e artigos mencionados)
+1. Nome do autor da ação.
+2. Nome do réu.
+3. Tipo de ação ou natureza do pedido (Ex: Ação de Cobrança, Indenização, etc).
+4. Valor da causa.
+5. Fatos principais (resumo em até 5 linhas).
+6. Pedidos do autor.
+7. Fundamentos jurídicos invocados na petição.
 
-Texto da petição:
-\"\"\"
-{texto_peticao}
-\"\"\"
-
-Retorne um JSON no seguinte formato:
-
+Retorne exatamente no seguinte formato JSON:
 {{
   "autor": "...",
   "reu": "...",
@@ -43,27 +45,30 @@ Retorne um JSON no seguinte formato:
   "pedidos": ["...", "..."],
   "fundamentos_juridicos": ["...", "..."]
 }}
+
+Petição inicial:
+\"\"\"
+{self.reduzir_texto(pdf_text, 5000)}
+\"\"\"
         """
 
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "Você é um jurista responsável por interpretar petições iniciais com clareza técnica e exatidão."},
+                    {"role": "system", "content": "Você é um advogado especializado em direito cível."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
-                max_tokens=1500
+                max_tokens=1200
             )
-
-            content = response.choices[0].message.content.strip()
-
-            # Avaliação extra: segurança na conversão JSON
-            import json
-            try:
-                return json.loads(content)
-            except json.JSONDecodeError:
-                raise ValueError("A resposta da IA não retornou um JSON válido.")
-
+            result_text = response.choices[0].message.content.strip()
+            result_json = json.loads(result_text)
+            return result_json
         except Exception as e:
-            raise RuntimeError(f"Erro ao analisar o PDF com IA: {e}")
+            raise Exception(f"Erro ao analisar o PDF com IA: {e}")
+
+    def process_pdf(self, file_path):
+        pdf_text = self.extract_text_from_pdf(file_path)
+        return self.analyze_pdf_with_ai(pdf_text)
+
