@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, request, jsonify, url_for, current_app
+from flask import Blueprint, request, jsonify, url_for
 from werkzeug.utils import secure_filename
 from docx import Document
 from datetime import datetime
@@ -9,8 +9,8 @@ from openai import OpenAI
 contestacao_bp = Blueprint("contestacao", __name__)
 pdf_processor = PDFProcessor()
 
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
-MODELO_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "modelos", "modelo_contestacao_com_placeholders_pronto.docx")
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "uploads")
+MODELO_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "modelos", "modelo_contestacao_com_placeholders_pronto.docx")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -29,11 +29,9 @@ def upload_pdf():
 
     try:
         dados_extraidos = pdf_processor.process_pdf(file_path)
-        return jsonify({
-            "dados_extraidos": dados_extraidos,
-            "session_file": dados_extraidos
-        }), 200
+        return jsonify({"dados_extraidos": dados_extraidos, "session_file": dados_extraidos}), 200
     except Exception as e:
+        print(f"Erro ao processar PDF: {e}")
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
 
 @contestacao_bp.route("/gerar-contestacao", methods=["POST"])
@@ -49,7 +47,7 @@ def gerar_contestacao():
         return jsonify({"erro": "Dados incompletos para gerar contestação"}), 400
 
     try:
-        # Etapa 1: Gerar corpo da contestação com IA
+        # Etapa 1: Geração do corpo com IA jurídica
         prompt = f"""
         Elabore uma contestação jurídica completa, considerando os seguintes elementos extraídos da petição inicial:
 
@@ -88,7 +86,7 @@ def gerar_contestacao():
             if chunk.choices[0].delta.content:
                 corpo_gerado += chunk.choices[0].delta.content
 
-        # Etapa 2: Preencher o modelo Word
+        # Etapa 2: Substituição no modelo Word
         doc = Document(MODELO_PATH)
 
         placeholders = {
@@ -110,6 +108,7 @@ def gerar_contestacao():
                 if key in paragraph.text:
                     paragraph.text = paragraph.text.replace(key, value)
 
+        # Salvar o arquivo gerado
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_{timestamp}.docx"
         output_path = os.path.join(UPLOAD_FOLDER, output_filename)
@@ -123,7 +122,9 @@ def gerar_contestacao():
         }), 200
 
     except Exception as e:
+        print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+
 
 
 
