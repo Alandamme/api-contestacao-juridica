@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, request, jsonify, url_for, current_app
+from flask import Blueprint, request, jsonify, url_for
 from werkzeug.utils import secure_filename
 from docx import Document
 from datetime import datetime
@@ -14,30 +14,27 @@ MODELO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "mod
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-@contestacao_bp.route("/api/upload", methods=["POST"])
-def upload():
+@contestacao_bp.route("/upload", methods=["POST"])
+def upload_pdf():
+    if "pdf" not in request.files:
+        return jsonify({"erro": "Nenhum arquivo PDF enviado"}), 400
+
+    file = request.files["pdf"]
+    if file.filename == "":
+        return jsonify({"erro": "Nome de arquivo inválido"}), 400
+
+    filename = secure_filename(file.filename)
+    file_path = os.path.join("/tmp", filename)
+    file.save(file_path)
+
     try:
-        if 'pdf' not in request.files:
-            return jsonify({"erro": "Arquivo PDF não enviado"}), 400
-
-        file = request.files['pdf']
-        if file.filename == '':
-            return jsonify({"erro": "Nome de arquivo inválido"}), 400
-
-        filename = secure_filename(file.filename)
-        pdf_path = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(pdf_path)
-
-        dados_extraidos = pdf_processor.process(pdf_path)
-        session_file = {"pdf_path": pdf_path, **dados_extraidos}
-
-        return jsonify({"message": "Arquivo processado com sucesso", "session_file": session_file}), 200
-
+        dados_extraidos = pdf_processor.process_pdf(file_path)
+        return jsonify({"dados_extraidos": dados_extraidos, "session_file": dados_extraidos}), 200
     except Exception as e:
-        current_app.logger.error(f"Erro ao processar PDF: {e}")
+        print(f"Erro ao processar PDF: {e}")
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
 
-@contestacao_bp.route("/api/gerar-contestacao", methods=["POST"])
+@contestacao_bp.route("/gerar-contestacao", methods=["POST"])
 def gerar_contestacao():
     data = request.json
     if not data:
@@ -50,32 +47,46 @@ def gerar_contestacao():
         return jsonify({"erro": "Dados incompletos para gerar contestação"}), 400
 
     try:
+        # Etapa 1: Geração do corpo com IA jurídica (OpenAI GPT)
         prompt = f"""
-        Elabore uma contestação jurídica clara, técnica e objetiva, rebatendo cada ponto da petição inicial, sem inventar jurisprudência:
+        Elabore uma contestação jurídica completa, clara e técnica, baseada nos elementos abaixo extraídos da petição inicial:
 
         Autor: {dados_peticao.get("autor", "não identificado")}
         Réu: {dados_peticao.get("reu", "não identificado")}
         Tipo de Ação: {dados_peticao.get("tipo_acao", "")}
         Valor da Causa: {dados_peticao.get("valor_causa", "")}
 
-        Fatos: {dados_peticao.get("fatos", "")}
-        Pedidos: {dados_peticao.get("pedidos", [])}
-        Fundamentos jurídicos: {dados_peticao.get("fundamentos_juridicos", [])}
+        Fatos alegados pelo autor:
+        {dados_peticao.get("fatos", "")}
+
+        Pedidos do autor:
+        {dados_peticao.get("pedidos", [])}
+
+        Fundamentos jurídicos apresentados pelo autor:
+        {dados_peticao.get("fundamentos_juridicos", [])}
+
+        Responda ponto a ponto, rebatendo cada argumento com base no direito civil atual, com uma linguagem técnica e moderna, sem inventar jurisprudência.
         """
 
         client = OpenAI()
-        response = client.chat.completions.create(
+
+        stream = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Você é um advogado civilista, especialista em contestações."},
+                {"role": "system", "content": "Você é um advogado civilista, especialista em redigir contestações técnicas e atuais."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.5,
-            max_tokens=1500
+            temperature=0.7,
+            max_tokens=1500,
+            stream=True
         )
 
-        corpo_gerado = response.choices[0].message.content.strip()
+        corpo_gerado = ""
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                corpo_gerado += chunk.choices[0].delta.content
 
+        # Etapa 2: Geração do Word final com placeholders substituídos
         doc = Document(MODELO_PATH)
 
         placeholders = {
@@ -97,6 +108,7 @@ def gerar_contestacao():
                 if key in paragraph.text:
                     paragraph.text = paragraph.text.replace(key, value)
 
+        # Salva o arquivo final
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_{timestamp}.docx"
         output_path = os.path.join(UPLOAD_FOLDER, output_filename)
@@ -104,11 +116,12 @@ def gerar_contestacao():
 
         return jsonify({
             "message": "Contestação gerada com sucesso!",
-            "files": {"word": url_for("download_file", filename=output_filename, _external=True)}
+            "files": {
+                "word": url_for("download_file", filename=output_filename, _external=True)
+            }
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Erro ao gerar contestação: {e}")
+        print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
-
 
