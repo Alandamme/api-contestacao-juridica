@@ -22,15 +22,11 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia dependências do Python e instala
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-# Copia o restante do código
 COPY . .
 
-# Expõe a porta padrão
 EXPOSE 5000
 
-# Comando para iniciar a aplicação
 CMD ["gunicorn", "src.main:app", "--bind", "0.0.0.0:5000"]
