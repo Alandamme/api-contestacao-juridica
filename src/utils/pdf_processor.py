@@ -47,9 +47,9 @@ Retorne exatamente no seguinte formato JSON:
 }}
 
 Petição inicial:
-\"\"\"
+"""
 {self.reduzir_texto(pdf_text, 5000)}
-\"\"\"
+"""
         """
 
         try:
@@ -71,4 +71,3 @@ Petição inicial:
     def process_pdf(self, file_path):
         pdf_text = self.extract_text_from_pdf(file_path)
         return self.analyze_pdf_with_ai(pdf_text)
-
