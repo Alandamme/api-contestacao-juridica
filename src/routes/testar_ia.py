@@ -72,3 +72,4 @@ def testar_ia():
         print(f"Erro ao gerar prévia com IA: {e}")
         return jsonify({"erro": f"Erro ao gerar texto com IA: {str(e)}"}), 500
 
+
