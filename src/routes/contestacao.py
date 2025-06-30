@@ -14,7 +14,7 @@ MODELO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "mod
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-@contestacao_bp.route("/upload", methods=["POST"])
+@contestacao_bp.route("/gerar-contestacao", methods=["POST"])
 def upload_pdf():
     if "pdf" not in request.files:
         return jsonify({"erro": "Nenhum arquivo PDF enviado"}), 400
