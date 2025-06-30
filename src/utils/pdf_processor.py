@@ -24,8 +24,9 @@ class PDFProcessor:
         return texto
 
     def analyze_pdf_with_ai(self, pdf_text):
+        texto_reduzido = self.reduzir_texto(pdf_text)
         prompt = f"""
-Você é um advogado especialista em direito cível e atuará como um analista de petições iniciais. 
+Você é um advogado especialista em direito cível e atuará como um analista de petições iniciais.
 Analise o texto da petição inicial abaixo e extraia de forma atualizada, técnica e moderna as seguintes informações, retornando em JSON:
 
 1. Nome do autor da ação.
@@ -53,9 +54,8 @@ Não invente dados. Se algo não estiver presente, coloque "Não especificado".
 
 Petição inicial:
 """
-{self.reduzir_texto(pdf_text)}
+{texto_reduzido}
 """
-        """
 
         try:
             response = self.client.chat.completions.create(
