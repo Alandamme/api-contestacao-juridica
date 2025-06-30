@@ -48,32 +48,27 @@ def gerar_contestacao():
 
     try:
         prompt = f"""
-        Elabore uma contestação jurídica detalhada, moderna e técnica, rebatendo ponto a ponto os argumentos do autor, com base em fundamentos jurídicos atualizados, sem inventar jurisprudência.
+        Elabore uma contestação jurídica clara, técnica e objetiva, rebatendo cada ponto da petição inicial, sem inventar jurisprudência:
 
         Autor: {dados_peticao.get("autor", "não identificado")}
         Réu: {dados_peticao.get("reu", "não identificado")}
         Tipo de Ação: {dados_peticao.get("tipo_acao", "")}
         Valor da Causa: {dados_peticao.get("valor_causa", "")}
 
-        Fatos alegados pelo autor:
-        {dados_peticao.get("fatos", "")}
-
-        Pedidos do autor:
-        {dados_peticao.get("pedidos", [])}
-
-        Fundamentos jurídicos apresentados pelo autor:
-        {dados_peticao.get("fundamentos_juridicos", [])}
+        Fatos: {dados_peticao.get("fatos", "")}
+        Pedidos: {dados_peticao.get("pedidos", [])}
+        Fundamentos jurídicos: {dados_peticao.get("fundamentos_juridicos", [])}
         """
 
         client = OpenAI()
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Você é um advogado especialista em contestações jurídicas, preciso, técnico e atualizado."},
+                {"role": "system", "content": "Você é um advogado civilista, especialista em contestações."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.5,
-            max_tokens=1500
+            max_tokens=1200
         )
 
         corpo_gerado = response.choices[0].message.content.strip()
@@ -114,6 +109,4 @@ def gerar_contestacao():
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
-
-
 
