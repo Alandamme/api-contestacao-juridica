@@ -14,7 +14,7 @@ MODELO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "mod
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-@contestacao_bp.route("/gerar-contestacao", methods=["POST"])
+@contestacao_bp.route("/upload", methods=["POST"])
 def upload_pdf():
     if "pdf" not in request.files:
         return jsonify({"erro": "Nenhum arquivo PDF enviado"}), 400
@@ -48,7 +48,7 @@ def gerar_contestacao():
 
     try:
         prompt = f"""
-        Elabore uma contestação jurídica clara, técnica e objetiva, rebatendo cada ponto da petição inicial, sem inventar jurisprudência:
+        Elabore uma contestação jurídica técnica e robusta, rebatendo cada ponto da petição inicial de forma fundamentada, sem inventar jurisprudência:
 
         Autor: {dados_peticao.get("autor", "não identificado")}
         Réu: {dados_peticao.get("reu", "não identificado")}
@@ -68,7 +68,7 @@ def gerar_contestacao():
                 {"role": "user", "content": prompt}
             ],
             temperature=0.5,
-            max_tokens=1200
+            max_tokens=1500
         )
 
         corpo_gerado = response.choices[0].message.content.strip()
