@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, request, jsonify, url_for
+from flask import Blueprint, request, jsonify, url_for, current_app
 from werkzeug.utils import secure_filename
 from docx import Document
 from datetime import datetime
@@ -13,26 +13,6 @@ UPLOAD_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 MODELO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "modelos", "modelo_contestacao_com_placeholders_pronto.docx"))
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-@contestacao_bp.route("/upload", methods=["POST"])
-def upload_pdf():
-    if "pdf" not in request.files:
-        return jsonify({"erro": "Nenhum arquivo PDF enviado"}), 400
-
-    file = request.files["pdf"]
-    if file.filename == "":
-        return jsonify({"erro": "Nome de arquivo inválido"}), 400
-
-    filename = secure_filename(file.filename)
-    file_path = os.path.join("/tmp", filename)
-    file.save(file_path)
-
-    try:
-        dados_extraidos = pdf_processor.process_pdf(file_path)
-        return jsonify({"dados_extraidos": dados_extraidos, "session_file": dados_extraidos}), 200
-    except Exception as e:
-        print(f"Erro ao processar PDF: {e}")
-        return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
 
 @contestacao_bp.route("/api/gerar-contestacao", methods=["POST"])
 def gerar_contestacao():
@@ -48,7 +28,7 @@ def gerar_contestacao():
 
     try:
         prompt = f"""
-        Elabore uma contestação jurídica técnica e robusta, rebatendo cada ponto da petição inicial de forma fundamentada, sem inventar jurisprudência:
+        Elabore uma contestação jurídica clara, técnica e objetiva, rebatendo cada ponto da petição inicial, sem inventar jurisprudência:
 
         Autor: {dados_peticao.get("autor", "não identificado")}
         Réu: {dados_peticao.get("reu", "não identificado")}
@@ -101,13 +81,11 @@ def gerar_contestacao():
 
         return jsonify({
             "message": "Contestação gerada com sucesso!",
-            "files": {
-                "word": url_for("download_file", filename=output_filename, _external=True)
-            }
+            "download_url": url_for("download_file", filename=output_filename, _external=True)
         }), 200
 
     except Exception as e:
-        print(f"Erro ao gerar contestação: {e}")
+        current_app.logger.error(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
 
 
