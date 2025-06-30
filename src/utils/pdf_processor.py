@@ -25,23 +25,19 @@ class PDFProcessor:
 
     def analyze_pdf_with_ai(self, pdf_text):
         prompt = f"""
-Você é um advogado especialista em Direito Civil e Processo Civil.
+Você é um advogado especialista em direito cível e atuará como um analista de petições iniciais. 
+Analise o texto da petição inicial abaixo e extraia de forma atualizada, técnica e moderna as seguintes informações, retornando em JSON:
 
-Leia cuidadosamente a petição inicial abaixo e faça:
+1. Nome do autor da ação.
+2. Nome do réu.
+3. Tipo de ação ou natureza do pedido.
+4. Valor da causa.
+5. Resumo técnico dos fatos em até 5 linhas.
+6. Pedidos do autor de forma estruturada (ex: lista).
+7. Fundamentos jurídicos apresentados pelo autor (ex: lista).
+8. Eventuais pontos controvertidos ou omissões relevantes que possam ser úteis na contestação (ex: lista).
 
-1️⃣ **Extraia** (se possível) em formato JSON os seguintes dados:
-- Nome do autor
-- Nome do réu
-- Tipo da ação
-- Valor da causa
-- Fatos principais (resumo)
-- Pedidos do autor
-- Fundamentos jurídicos apresentados
-
-2️⃣ **Analise tecnicamente** a petição inicial: destaque possíveis pontos frágeis do pedido, teses jurídicas que podem ser exploradas na contestação e observações relevantes para a defesa.
-
-Retorne EXATAMENTE neste formato JSON:
-```
+Formato exato de retorno JSON:
 {{
   "autor": "...",
   "reu": "...",
@@ -50,23 +46,25 @@ Retorne EXATAMENTE neste formato JSON:
   "fatos": "...",
   "pedidos": ["...", "..."],
   "fundamentos_juridicos": ["...", "..."],
-  "analise_juridica": "Aqui um texto técnico e atual sobre possíveis linhas de defesa, preliminares, teses e observações."
+  "pontos_controvertidos": ["...", "..."]
 }}
+
+Não invente dados. Se algo não estiver presente, coloque "Não especificado".
 
 Petição inicial:
 """
-{self.reduzir_texto(pdf_text, 7000)}
+{self.reduzir_texto(pdf_text)}
 """
-"""
+        """
 
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "Você é um advogado especializado em petições cíveis."},
+                    {"role": "system", "content": "Você é um advogado especializado em análise de petições iniciais."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3,
+                temperature=0.2,
                 max_tokens=1500
             )
             result_text = response.choices[0].message.content.strip()
