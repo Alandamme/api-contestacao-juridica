@@ -18,24 +18,30 @@ class PDFProcessor:
         except Exception as e:
             raise Exception(f"Erro ao extrair texto do PDF: {e}")
 
-    def reduzir_texto(self, texto, limite=5000):
+    def reduzir_texto(self, texto, limite=7000):
         if len(texto) > limite:
             return texto[:limite] + "\n[Texto truncado por limite de tokens]"
         return texto
 
     def analyze_pdf_with_ai(self, pdf_text):
         prompt = f"""
-Você é um advogado especialista em direito cível. Analise o texto da petição inicial abaixo e extraia as seguintes informações de forma clara e objetiva, organizadas em formato JSON:
+Você é um advogado especialista em Direito Civil e Processo Civil.
 
-1. Nome do autor da ação.
-2. Nome do réu.
-3. Tipo de ação ou natureza do pedido (Ex: Ação de Cobrança, Indenização, etc).
-4. Valor da causa.
-5. Fatos principais (resumo em até 5 linhas).
-6. Pedidos do autor.
-7. Fundamentos jurídicos invocados na petição.
+Leia cuidadosamente a petição inicial abaixo e faça:
 
-Retorne exatamente no seguinte formato JSON:
+1️⃣ **Extraia** (se possível) em formato JSON os seguintes dados:
+- Nome do autor
+- Nome do réu
+- Tipo da ação
+- Valor da causa
+- Fatos principais (resumo)
+- Pedidos do autor
+- Fundamentos jurídicos apresentados
+
+2️⃣ **Analise tecnicamente** a petição inicial: destaque possíveis pontos frágeis do pedido, teses jurídicas que podem ser exploradas na contestação e observações relevantes para a defesa.
+
+Retorne EXATAMENTE neste formato JSON:
+```
 {{
   "autor": "...",
   "reu": "...",
@@ -43,24 +49,25 @@ Retorne exatamente no seguinte formato JSON:
   "valor_causa": "...",
   "fatos": "...",
   "pedidos": ["...", "..."],
-  "fundamentos_juridicos": ["...", "..."]
+  "fundamentos_juridicos": ["...", "..."],
+  "analise_juridica": "Aqui um texto técnico e atual sobre possíveis linhas de defesa, preliminares, teses e observações."
 }}
 
 Petição inicial:
 """
-{self.reduzir_texto(pdf_text, 5000)}
+{self.reduzir_texto(pdf_text, 7000)}
 """
-        """
+"""
 
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "Você é um advogado especializado em direito cível."},
+                    {"role": "system", "content": "Você é um advogado especializado em petições cíveis."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
-                max_tokens=1200
+                max_tokens=1500
             )
             result_text = response.choices[0].message.content.strip()
             result_json = json.loads(result_text)
