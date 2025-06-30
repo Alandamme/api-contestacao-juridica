@@ -14,6 +14,29 @@ MODELO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "mod
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+@contestacao_bp.route("/api/upload", methods=["POST"])
+def upload():
+    try:
+        if 'pdf' not in request.files:
+            return jsonify({"erro": "Arquivo PDF não enviado"}), 400
+
+        file = request.files['pdf']
+        if file.filename == '':
+            return jsonify({"erro": "Nome de arquivo inválido"}), 400
+
+        filename = secure_filename(file.filename)
+        pdf_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(pdf_path)
+
+        dados_extraidos = pdf_processor.process(pdf_path)
+        session_file = {"pdf_path": pdf_path, **dados_extraidos}
+
+        return jsonify({"message": "Arquivo processado com sucesso", "session_file": session_file}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Erro ao processar PDF: {e}")
+        return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
+
 @contestacao_bp.route("/api/gerar-contestacao", methods=["POST"])
 def gerar_contestacao():
     data = request.json
@@ -81,10 +104,11 @@ def gerar_contestacao():
 
         return jsonify({
             "message": "Contestação gerada com sucesso!",
-            "download_url": url_for("download_file", filename=output_filename, _external=True)
+            "files": {"word": url_for("download_file", filename=output_filename, _external=True)}
         }), 200
 
     except Exception as e:
         current_app.logger.error(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+
 
