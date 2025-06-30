@@ -34,7 +34,7 @@ def upload_pdf():
         print(f"Erro ao processar PDF: {e}")
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
 
-@contestacao_bp.route("/gerar-contestacao", methods=["POST"])
+@contestacao_bp.route("/api/gerar-contestacao", methods=["POST"])
 def gerar_contestacao():
     data = request.json
     if not data:
@@ -47,7 +47,6 @@ def gerar_contestacao():
         return jsonify({"erro": "Dados incompletos para gerar contestação"}), 400
 
     try:
-        # Etapa 1: Geração do corpo com IA jurídica (OpenAI GPT)
         prompt = f"""
         Elabore uma contestação jurídica completa, clara e técnica, baseada nos elementos abaixo extraídos da petição inicial:
 
@@ -86,7 +85,6 @@ def gerar_contestacao():
             if chunk.choices[0].delta.content:
                 corpo_gerado += chunk.choices[0].delta.content
 
-        # Etapa 2: Geração do Word final com placeholders substituídos
         doc = Document(MODELO_PATH)
 
         placeholders = {
@@ -108,7 +106,6 @@ def gerar_contestacao():
                 if key in paragraph.text:
                     paragraph.text = paragraph.text.replace(key, value)
 
-        # Salva o arquivo final
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_{timestamp}.docx"
         output_path = os.path.join(UPLOAD_FOLDER, output_filename)
@@ -124,4 +121,5 @@ def gerar_contestacao():
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+
 
