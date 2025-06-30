@@ -88,4 +88,3 @@ def gerar_contestacao():
         current_app.logger.error(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
 
-
