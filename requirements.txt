@@ -2,11 +2,11 @@
 Flask==3.1.1
 flask-cors==6.0.0
 Flask-SQLAlchemy==3.1.1
-gunicorn==21.2.0  # versão estável atual
+gunicorn==21.2.0  # Servidor WSGI compatível com Docker + Render
 
-# 🧱 SQLAlchemy (core ORM)
+# 🧱 SQLAlchemy (ORM moderno)
 SQLAlchemy==2.0.41
-greenlet==3.2.3
+greenlet==3.2.3  # Requisito do SQLAlchemy
 
 # 🔐 Segurança e utilitários Flask
 itsdangerous==2.2.0
@@ -16,15 +16,20 @@ blinker==1.9.0
 Jinja2==3.1.6
 MarkupSafe==3.0.2
 
-# 📄 Manipulação de arquivos
-PyPDF2==3.0.1
-PyMuPDF==1.21.1         # ✅ evita compilação, compatível com Render Free
-python-docx==1.1.2
-lxml==5.4.0
+# 📄 Manipulação de arquivos PDF e Word
+PyPDF2==3.0.1         # Leitura de PDFs
+PyMuPDF==1.21.1       # Extração robusta de texto do PDF (leve e rápido)
+python-docx==1.1.2    # Edição e criação de arquivos Word (.docx)
+lxml==5.4.0           # Compatível com Render, suporte XML para Word
 
 # 🤖 OpenAI API
-openai==1.91.0
-httpx>=0.28.1            # ✅ necessário para evitar erro 'proxies'
+openai==1.91.0        # Nova SDK da OpenAI (com chat completions)
+httpx>=0.28.1         # Compatível com proxies e necessário p/ OpenAI SDK
 
-# 📚 Compatibilidade
+# 🧩 Compatibilidade e suporte a anotações modernas
 typing_extensions>=4.10.0
+
+# 🛠 Instalação robusta (opcional, mas recomendado)
+setuptools>=65.5.0
+wheel>=0.40.0
+
