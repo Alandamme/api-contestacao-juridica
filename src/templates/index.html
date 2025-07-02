@@ -76,7 +76,17 @@
     </div>
 
     <div class="d-flex gap-3 mb-4">
+      <button id="btn-testar-ia" class="btn btn-outline-primary"><i class="bi bi-cpu me-1"></i>Testar IA (Prévia)</button>
       <button id="btn-gerar" class="btn btn-success"><i class="bi bi-file-earmark-word me-1"></i>Gerar Contestação (.docx)</button>
+    </div>
+
+    <div class="card mb-5 d-none" id="preview-card">
+      <div class="card-header bg-secondary text-white">
+        <i class="bi bi-eye-fill me-2"></i>Pré-visualização da Contestação (IA)
+      </div>
+      <div class="card-body">
+        <pre id="preview-text">Carregando...</pre>
+      </div>
     </div>
   </div>
 
@@ -110,40 +120,40 @@
       }
     });
 
-    
+    document.getElementById("btn-testar-ia").addEventListener("click", async () => {
+      document.getElementById("preview-card").classList.remove("d-none");
+      document.getElementById("preview-text").innerText = "Aguarde, a IA está gerando o texto...";
+
+      const res = await fetch("/testar-ia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_file })
+      });
+
+      const data = await res.json();
+      document.getElementById("preview-text").innerText = data.corpo_gerado || data.erro || "Erro ao gerar prévia.";
+    });
+
     document.getElementById("btn-gerar").addEventListener("click", async () => {
-  const dados_advogado = {
-    nome_advogado: document.getElementById("nome_advogado").value,
-    oab: document.getElementById("oab").value,
-    estado: document.getElementById("estado").value
-  };
+      const dados_advogado = {
+        nome_advogado: document.getElementById("nome_advogado").value,
+        oab: document.getElementById("oab").value,
+        estado: document.getElementById("estado").value
+      };
 
-  const res = await fetch("/api/gerar-contestacao", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session_file, dados_advogado })
-  });
+      const res = await fetch("/api/gerar-contestacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_file, dados_advogado })
+      });
 
-  const data = await res.json();
-  if (res.ok && data.files && data.files.word) {
-    const fileUrl = data.files.word;
-
-    const response = await fetch(fileUrl);
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "contestacao_gerada.docx";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  } else {
-    alert("Erro: " + (data.erro || "Não foi possível gerar o arquivo Word."));
-  }
-});
-
+      const data = await res.json();
+      if (res.ok) {
+        window.open(data.files.word, "_blank");
+      } else {
+        alert("Erro: " + data.erro);
+      }
+    });
   </script>
 </body>
 </html>
