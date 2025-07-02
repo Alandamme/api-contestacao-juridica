@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1
 # Dependências do sistema
 RUN apt-get update && apt-get install -y \
     build-essential \
-    swig \                       # ← ESSENCIAL para compilar PyMuPDF
+    swig \
     libjpeg-dev \
     zlib1g-dev \
     libfreetype6-dev \
@@ -31,4 +31,5 @@ COPY . .
 EXPOSE 5000
 
 CMD ["gunicorn", "src.main:app", "--bind", "0.0.0.0:5000"]
+
 
