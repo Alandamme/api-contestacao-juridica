@@ -126,3 +126,20 @@ def validar_dados_advogado(dados: Dict, campos_obrigatorios: List[str]) -> List[
         if campo not in dados or not str(dados[campo]).strip():
             erros.append(f"Campo obrigatório '{campo}' está ausente ou vazio.")
     return erros
+def validar_dados_advogado(dados: dict, campos_obrigatorios: list) -> list:
+    """
+    Valida campos obrigatórios do advogado.
+
+    Args:
+        dados (dict): Dicionário com os dados do advogado.
+        campos_obrigatorios (list): Lista com os nomes dos campos obrigatórios.
+
+    Returns:
+        list: Lista com os nomes dos campos ausentes.
+    """
+    ausentes = []
+    for campo in campos_obrigatorios:
+        valor = dados.get(campo, "").strip() if isinstance(dados.get(campo), str) else dados.get(campo)
+        if not valor:
+            ausentes.append(campo)
+    return ausentes
