@@ -135,25 +135,38 @@
     });
 
     document.getElementById("btn-gerar").addEventListener("click", async () => {
-      const dados_advogado = {
-        nome_advogado: document.getElementById("nome_advogado").value,
-        oab: document.getElementById("oab").value,
-        estado: document.getElementById("estado").value
-      };
+  const dados_advogado = {
+    nome_advogado: document.getElementById("nome_advogado").value,
+    oab: document.getElementById("oab").value,
+    estado: document.getElementById("estado").value
+  };
 
-      const res = await fetch("/api/gerar-contestacao", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_file, dados_advogado })
-      });
+  const res = await fetch("/api/gerar-contestacao", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_file, dados_advogado })
+  });
 
-      const data = await res.json();
-      if (res.ok) {
-        window.open(data.files.word, "_blank");
-      } else {
-        alert("Erro: " + data.erro);
-      }
-    });
+  const data = await res.json();
+  if (res.ok && data.files && data.files.word) {
+    const fileUrl = data.files.word;
+
+    const response = await fetch(fileUrl);
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "contestacao_gerada.docx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } else {
+    alert("Erro: " + (data.erro || "Não foi possível gerar o arquivo Word."));
+  }
+});
+
   </script>
 </body>
 </html>
