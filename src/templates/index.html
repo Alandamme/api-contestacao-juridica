@@ -134,7 +134,7 @@
       document.getElementById("preview-text").innerText = data.corpo_gerado || data.erro || "Erro ao gerar prévia.";
     });
 
-   document.getElementById("btn-gerar").addEventListener("click", async () => {
+  document.getElementById("btn-gerar").addEventListener("click", async () => {
   const dados_advogado = {
     nome_advogado: document.getElementById("nome_advogado").value,
     oab: document.getElementById("oab").value,
@@ -147,18 +147,10 @@
     body: JSON.stringify({ session_file, dados_advogado })
   });
 
+  const data = await res.json();
   if (res.ok) {
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "contestacao.docx";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
+    window.open(data.files.word, "_blank");
   } else {
-    const erro = await res.json();
-    alert("Erro: " + erro.erro);
+    alert("Erro: " + data.erro);
   }
 });
