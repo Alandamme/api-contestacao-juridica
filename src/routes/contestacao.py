@@ -124,9 +124,7 @@ def gerar_contestacao():
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
-        from flask import send_from_directory
-
-
+    
 
 
 
