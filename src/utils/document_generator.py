@@ -1,53 +1,48 @@
 import os
 from docx import Document
-from docx.shared import Pt
-from datetime import datetime
 
-
-class WordContestacaoGenerator:
-    """
-    Gera uma contestação em formato .docx a partir de dados extraídos de uma petição inicial e do modelo base do escritório.
-    """
-
+class DocumentGenerator:
     def __init__(self, modelo_path: str):
         if not os.path.exists(modelo_path):
-            raise FileNotFoundError(f"Modelo DOCX não encontrado: {modelo_path}")
+            raise FileNotFoundError(f"Modelo não encontrado em: {modelo_path}")
         self.modelo_path = modelo_path
 
-    def gerar_contestacao(self, dados_extraidos: dict, dados_reu: dict, salvar_em: str) -> str:
+    def gerar_contestacao_word(self, dados_extraidos: dict, corpo_ia: str, dados_advogado: dict, output_path: str) -> str:
+        """
+        Preenche o modelo .docx com dados e gera novo arquivo.
+        """
         doc = Document(self.modelo_path)
 
-        # Substituições simples por placeholders do modelo
-        placeholders = {
-            "[NOME_AUTOR]": dados_extraidos.get("autor", {}).get("nome", "NOME DO AUTOR"),
-            "[QUALIFICACAO_AUTOR]": dados_extraidos.get("autor", {}).get("qualificacao", ""),
-            "[ENDERECO_AUTOR]": dados_extraidos.get("autor", {}).get("endereco", ""),
-
-            "[NOME_REU]": dados_extraidos.get("reu", {}).get("nome", "NOME DO RÉU"),
-            "[QUALIFICACAO_REU]": dados_extrairos.get("reu", {}).get("qualificacao", ""),
-            "[ENDERECO_REU]": dados_extraidos.get("reu", {}).get("endereco", ""),
-
+        # Placeholders simples
+        substituicoes = {
+            "[NOME_AUTOR]": dados_extraidos.get("autor", ""),
+            "[NOME_REU]": dados_extraidos.get("reu", ""),
             "[TIPO_ACAO]": dados_extraidos.get("tipo_acao", ""),
             "[VALOR_CAUSA]": dados_extraidos.get("valor_causa", ""),
-
-            "[RESUMO_FATOS]": dados_extraidos.get("fatos", ""),
-
-            "[PEDIDOS]": '\n'.join(f"- {p}" for p in dados_extraidos.get("pedidos", [])),
-            "[FUNDAMENTOS]": '\n'.join(f"- {f}" for f in dados_extraidos.get("fundamentos_juridicos", [])),
-
-            "[NOME_ADVOGADO]": dados_reu.get("advogado_reu", ""),
-            "[OAB_NUMERO]": dados_reu.get("oab_numero", ""),
-            "[UF]": dados_reu.get("estado", ""),
-            "[DATA]": datetime.today().strftime("%d/%m/%Y")
+            "[NOME_ADVOGADO]": dados_advogado.get("nome_advogado", ""),
+            "[OAB_ADVOGADO]": dados_advogado.get("oab_advogado", ""),
+            "[UF_ADVOGADO]": dados_advogado.get("uf_advogado", ""),
+            "{{corpo_contestacao}}": corpo_ia.strip()
         }
 
-        for paragraph in doc.paragraphs:
-            for key, value in placeholders.items():
-                if key in paragraph.text:
-                    paragraph.text = paragraph.text.replace(key, value)
-                    for run in paragraph.runs:
-                        run.font.size = Pt(12)
+        for p in doc.paragraphs:
+            for key, val in substituicoes.items():
+                if key in p.text:
+                    inline = p.runs
+                    for i in range(len(inline)):
+                        if key in inline[i].text:
+                            inline[i].text = inline[i].text.replace(key, val)
 
-        doc.save(salvar_em)
-        return salvar_em
+        # Substituir também em tabelas (cabeçalho ou corpo podem conter)
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        for key, val in substituicoes.items():
+                            if key in p.text:
+                                for run in p.runs:
+                                    run.text = run.text.replace(key, val)
 
+        # Salva o novo arquivo preenchido
+        doc.save(output_path)
+        return output_path
