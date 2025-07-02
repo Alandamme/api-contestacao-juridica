@@ -9,14 +9,13 @@ class DocumentGenerator:
 
     def gerar_contestacao_word(self, dados_extraidos: dict, corpo_ia: str, dados_advogado: dict, output_path: str) -> str:
         """
-        Preenche o modelo .docx com dados e gera novo arquivo.
+        Preenche o modelo .docx com dados da IA e advogado.
         """
         doc = Document(self.modelo_path)
 
-        # Placeholders simples
         substituicoes = {
             "[NOME_AUTOR]": dados_extraidos.get("autor", ""),
-            "[NOME_REU]": dados_extraidos.get("reu", ""),
+            "[NOME_REU]": dados_extrairos.get("reu", ""),
             "[TIPO_ACAO]": dados_extraidos.get("tipo_acao", ""),
             "[VALOR_CAUSA]": dados_extraidos.get("valor_causa", ""),
             "[NOME_ADVOGADO]": dados_advogado.get("nome_advogado", ""),
@@ -28,12 +27,9 @@ class DocumentGenerator:
         for p in doc.paragraphs:
             for key, val in substituicoes.items():
                 if key in p.text:
-                    inline = p.runs
-                    for i in range(len(inline)):
-                        if key in inline[i].text:
-                            inline[i].text = inline[i].text.replace(key, val)
+                    for run in p.runs:
+                        run.text = run.text.replace(key, val)
 
-        # Substituir também em tabelas (cabeçalho ou corpo podem conter)
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
@@ -43,6 +39,6 @@ class DocumentGenerator:
                                 for run in p.runs:
                                     run.text = run.text.replace(key, val)
 
-        # Salva o novo arquivo preenchido
         doc.save(output_path)
         return output_path
+
