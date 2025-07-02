@@ -1,7 +1,5 @@
-
-
 import os
-from flask import Blueprint, request, jsonify, url_for
+from flask import Blueprint, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from docx import Document
 from datetime import datetime
@@ -15,6 +13,7 @@ UPLOAD_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 MODELO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "modelos", "modelo_contestacao_com_placeholders_pronto.docx"))
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 @contestacao_bp.route("/upload", methods=["POST"])
 def upload_pdf():
@@ -36,6 +35,7 @@ def upload_pdf():
         print(f"Erro ao processar PDF: {e}")
         return jsonify({"erro": f"Erro ao processar PDF: {str(e)}"}), 500
 
+
 @contestacao_bp.route("/gerar-contestacao", methods=["POST"])
 def gerar_contestacao():
     data = request.json
@@ -49,7 +49,7 @@ def gerar_contestacao():
         return jsonify({"erro": "Dados incompletos para gerar contestação"}), 400
 
     try:
-        # Etapa 1: Geração do corpo com IA jurídica (OpenAI GPT)
+        # Etapa 1: Geração do corpo com IA jurídica
         prompt = f"""
         Elabore uma contestação jurídica completa, clara e técnica, baseada nos elementos abaixo extraídos da petição inicial:
 
@@ -88,7 +88,7 @@ def gerar_contestacao():
             if chunk.choices[0].delta.content:
                 corpo_gerado += chunk.choices[0].delta.content
 
-        # Etapa 2: Geração do Word final com placeholders substituídos
+        # Etapa 2: Geração do Word com substituição de placeholders
         doc = Document(MODELO_PATH)
 
         placeholders = {
@@ -105,24 +105,30 @@ def gerar_contestacao():
             "{{CONTESTACAO_IA}}": corpo_gerado
         }
 
+        def substituir_placeholder(paragraph, key, value):
+            if key in paragraph.text:
+                inline = paragraph.runs
+                for i in range(len(inline)):
+                    if key in inline[i].text:
+                        inline[i].text = inline[i].text.replace(key, value)
+
         for paragraph in doc.paragraphs:
             for key, value in placeholders.items():
-                if key in paragraph.text:
-                    paragraph.text = paragraph.text.replace(key, value)
+                substituir_placeholder(paragraph, key, value)
 
-        # Salva o arquivo final
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_{timestamp}.docx"
         output_path = os.path.join(UPLOAD_FOLDER, output_filename)
         doc.save(output_path)
 
-        return jsonify({
-            "message": "Contestação gerada com sucesso!",
-            "files": {
-                "word": url_for("download_file", filename=output_filename, _external=True)
-            }
-        }), 200
+        return send_file(
+            output_path,
+            as_attachment=True,
+            download_name=output_filename,
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
 
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+
