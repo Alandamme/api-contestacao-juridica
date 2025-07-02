@@ -68,18 +68,24 @@ def gerar_contestacao():
         Responda ponto a ponto, rebatendo cada argumento com base no direito civil atual, com uma linguagem técnica e moderna, sem inventar jurisprudência.
         """
 
-        # Geração do corpo com OpenAI (sem stream)
-        client = OpenAI()
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "Você é um advogado civilista, especialista em redigir contestações técnicas e atuais."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=1500
-        )
-        corpo_gerado = response.choices[0].message.content
+     # Geração do corpo com OpenAI (com stream para reduzir uso de memória)
+client = OpenAI()
+stream = client.chat.completions.create(
+    model="gpt-4",
+    messages=[
+        {"role": "system", "content": "Você é um advogado civilista, especialista em redigir contestações técnicas e atuais."},
+        {"role": "user", "content": prompt}
+    ],
+    temperature=0.7,
+    max_tokens=1500,
+    stream=True
+)
+
+corpo_gerado = ""
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        corpo_gerado += chunk.choices[0].delta.content
+
 
         # Preenchimento do modelo Word
         doc = Document(MODELO_PATH)
