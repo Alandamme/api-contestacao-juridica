@@ -1,3 +1,5 @@
+
+
 import os
 from flask import Blueprint, request, jsonify, url_for
 from werkzeug.utils import secure_filename
@@ -124,9 +126,3 @@ def gerar_contestacao():
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
-    
-
-
-
-
-
