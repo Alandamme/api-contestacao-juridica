@@ -20,6 +20,7 @@ MarkupSafe==3.0.2
 PyPDF2==3.0.1         # Leitura de PDFs
 PyMuPDF==1.21.1       # Extração robusta de texto do PDF (leve e rápido)
 python-docx==1.1.2    # Edição e criação de arquivos Word (.docx)
+docxtpl==0.16.7       # Template para .docx com placeholder (contestação IA)
 lxml==5.4.0           # Compatível com Render, suporte XML para Word
 
 # 🤖 OpenAI API
