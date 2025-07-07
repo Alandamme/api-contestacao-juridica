@@ -1,4 +1,9 @@
-<!DOCTYPE html>
+from pathlib import Path
+
+# Caminho e conteúdo do arquivo HTML atualizado
+output_path = Path("/mnt/data/index_atualizado.html")
+
+html_content = """<!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
@@ -78,6 +83,7 @@
     <div class="d-flex gap-3 mb-4">
       <button id="btn-testar-ia" class="btn btn-outline-primary"><i class="bi bi-cpu me-1"></i>Testar IA (Prévia)</button>
       <button id="btn-gerar" class="btn btn-success"><i class="bi bi-file-earmark-word me-1"></i>Gerar Contestação (.docx)</button>
+      <button id="btn-testar-ia-docx" class="btn btn-secondary"><i class="bi bi-file-earmark-word me-1"></i>Testar IA e baixar Word</button>
     </div>
 
     <div class="card mb-5 d-none" id="preview-card">
@@ -134,6 +140,39 @@
       document.getElementById("preview-text").innerText = data.corpo_gerado || data.erro || "Erro ao gerar prévia.";
     });
 
+    document.getElementById("btn-testar-ia-docx").addEventListener("click", async () => {
+      const resultadoDiv = document.getElementById("preview-card");
+      const previewText = document.getElementById("preview-text");
+
+      resultadoDiv.classList.remove("d-none");
+      previewText.innerHTML = "⏳ Gerando contestação com IA...";
+
+      const res = await fetch("/testar-ia-docx", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ session_file })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.corpo_contestacao) {
+        previewText.innerText = data.corpo_contestacao;
+
+        const downloadLink = document.createElement("a");
+        downloadLink.href = data.arquivo_word;
+        downloadLink.className = "btn btn-success mt-3";
+        downloadLink.innerHTML = "<i class='bi bi-download'></i> Baixar Word gerado";
+        downloadLink.download = "contestacao_preview.docx";
+
+        previewText.appendChild(document.createElement("br"));
+        previewText.appendChild(downloadLink);
+      } else {
+        previewText.innerHTML = "<span class='text-danger'>Erro ao gerar contestação.</span>";
+      }
+    });
+
     document.getElementById("btn-gerar").addEventListener("click", async () => {
       const dados_advogado = {
         nome_advogado: document.getElementById("nome_advogado").value,
@@ -157,3 +196,9 @@
   </script>
 </body>
 </html>
+"""
+
+# Salvar
+output_path.write_text(html_content, encoding="utf-8")
+output_path.as_posix()
+
