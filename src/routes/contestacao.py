@@ -1,8 +1,9 @@
 import os
 from flask import Blueprint, request, jsonify, send_file
 from werkzeug.utils import secure_filename
-from docx import Document
 from datetime import datetime
+from docx import Document
+from docxtpl import DocxTemplate
 from src.utils.pdf_processor import PDFProcessor
 from openai import OpenAI
 
@@ -88,33 +89,12 @@ def gerar_contestacao():
             if chunk.choices[0].delta.content:
                 corpo_gerado += chunk.choices[0].delta.content
 
-        # Etapa 2: Geração do Word com substituição de placeholders
-        doc = Document(MODELO_PATH)
-
-        placeholders = {
-            "{{AUTOR}}": dados_peticao.get("autor", ""),
-            "{{REU}}": dados_peticao.get("reu", ""),
-            "{{TIPO_ACAO}}": dados_peticao.get("tipo_acao", ""),
-            "{{VALOR_CAUSA}}": dados_peticao.get("valor_causa", ""),
-            "{{RESUMO_FATOS}}": dados_peticao.get("fatos", ""),
-            "{{PEDIDOS}}": "\n".join(f"- {p}" for p in dados_peticao.get("pedidos", [])),
-            "{{FUNDAMENTOS_JURIDICOS}}": "\n".join(f"- {f}" for f in dados_peticao.get("fundamentos_juridicos", [])),
-            "{{NOME_ADVOGADO}}": dados_advogado.get("nome_advogado", ""),
-            "{{OAB}}": dados_advogado.get("oab", ""),
-            "{{ESTADO}}": dados_advogado.get("estado", ""),
-            "{{CONTESTACAO_IA}}": corpo_gerado
+        # Etapa 2: Geração do Word com o corpo da contestação usando placeholder
+        doc = DocxTemplate(MODELO_PATH)
+        context = {
+            "corpo_contestacao": corpo_gerado.strip()
         }
-
-        def substituir_placeholder(paragraph, key, value):
-            if key in paragraph.text:
-                inline = paragraph.runs
-                for i in range(len(inline)):
-                    if key in inline[i].text:
-                        inline[i].text = inline[i].text.replace(key, value)
-
-        for paragraph in doc.paragraphs:
-            for key, value in placeholders.items():
-                substituir_placeholder(paragraph, key, value)
+        doc.render(context)
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_{timestamp}.docx"
@@ -131,4 +111,87 @@ def gerar_contestacao():
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
         return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+
+
+@contestacao_bp.route("/testar-ia-docx", methods=["POST"])
+def testar_ia_gerar_word():
+    data = request.json
+    if not data:
+        return jsonify({"erro": "JSON ausente"}), 400
+
+    dados_peticao = data.get("session_file")
+    if not dados_peticao:
+        return jsonify({"erro": "Dados da petição ausentes"}), 400
+
+    try:
+        # Prompt IA
+        prompt = f"""
+        Elabore uma contestação jurídica completa, clara e técnica, baseada nos elementos abaixo extraídos da petição inicial:
+
+        Autor: {dados_peticao.get("autor", "não identificado")}
+        Réu: {dados_peticao.get("reu", "não identificado")}
+        Tipo de Ação: {dados_peticao.get("tipo_acao", "")}
+        Valor da Causa: {dados_peticao.get("valor_causa", "")}
+
+        Fatos alegados pelo autor:
+        {dados_peticao.get("fatos", "")}
+
+        Pedidos do autor:
+        {dados_peticao.get("pedidos", [])}
+
+        Fundamentos jurídicos apresentados pelo autor:
+        {dados_peticao.get("fundamentos_juridicos", [])}
+
+        Responda ponto a ponto, rebatendo cada argumento com base no direito civil atual, com uma linguagem técnica e moderna, sem inventar jurisprudência.
+        """
+
+        client = OpenAI()
+        stream = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Você é um advogado civilista, especialista em redigir contestações técnicas e atuais."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=1500,
+            stream=True
+        )
+
+        corpo_gerado = ""
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                corpo_gerado += chunk.choices[0].delta.content
+
+        doc = DocxTemplate(MODELO_PATH)
+        context = {
+            "corpo_contestacao": corpo_gerado.strip()
+        }
+        doc.render(context)
+
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        output_filename = f"contestacao_preview_{timestamp}.docx"
+        output_path = os.path.join(UPLOAD_FOLDER, output_filename)
+        doc.save(output_path)
+
+        return jsonify({
+            "corpo_contestacao": corpo_gerado.strip(),
+            "arquivo_word": f"/download/{output_filename}"
+        })
+
+    except Exception as e:
+        print(f"Erro ao testar IA e gerar Word: {e}")
+        return jsonify({"erro": f"Erro ao testar IA e gerar Word: {str(e)}"}), 500
+
+
+@contestacao_bp.route("/download/<filename>", methods=["GET"])
+def baixar_arquivo(filename):
+    caminho = os.path.join(UPLOAD_FOLDER, filename)
+    if not os.path.isfile(caminho):
+        return jsonify({"erro": "Arquivo não encontrado"}), 404
+    return send_file(
+        caminho,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
 
