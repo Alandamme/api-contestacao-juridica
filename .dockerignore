@@ -1,0 +1,17 @@
+# Ignora arquivos/desnecessários do ambiente local
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Ignora pastas de cache do Python
+*.egg-info/
+dist/
+build/
+
+# Ignora pastas temporárias
+uploads/
+tmp/
+.env
+*.env
