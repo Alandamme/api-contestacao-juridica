@@ -17,20 +17,19 @@ Jinja2==3.1.6
 MarkupSafe==3.0.2
 
 # 📄 Manipulação de arquivos PDF e Word
-PyPDF2==3.0.1         # Leitura de PDFs
-PyMuPDF==1.21.1       # Extração robusta de texto do PDF (leve e rápido)
-python-docx==1.1.2    # Edição e criação de arquivos Word (.docx)
-docxtpl==0.16.7       # Template para .docx com placeholder (contestação IA)
-lxml==5.4.0           # Compatível com Render, suporte XML para Word
+PyMuPDF==1.21.1        # Extração robusta de texto do PDF (mais leve que PyPDF2)
+python-docx==1.1.2     # Edição e criação de arquivos Word (.docx)
+docxtpl==0.16.7        # Template para .docx com placeholder (contestação IA)
+lxml==5.4.0            # Compatível com Render, suporte XML para Word
 
 # 🤖 OpenAI API
-openai==1.91.0        # Nova SDK da OpenAI (com chat completions)
-httpx>=0.28.1         # Compatível com proxies e necessário p/ OpenAI SDK
+openai==1.91.0         # Nova SDK da OpenAI (com chat completions)
+httpx>=0.28.1          # Compatível com proxies e necessário p/ OpenAI SDK
 
 # 🧩 Compatibilidade e suporte a anotações modernas
 typing_extensions>=4.10.0
 
-# 🛠 Instalação robusta (opcional, mas recomendado)
-setuptools>=65.5.0,<81
+# 🛠 Instalação robusta (Render + compatibilidade futura)
+setuptools>=65.5.0,<81  # Limite superior evita aviso do pkg_resources
 wheel>=0.40.0
 
