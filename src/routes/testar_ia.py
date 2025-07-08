@@ -16,6 +16,9 @@ def testar_ia():
         return jsonify({"erro": "Dados da petição ausentes"}), 400
 
     try:
+        pedidos = "\n".join(dados_peticao.get("pedidos", []))
+        fundamentos = "\n".join(dados_peticao.get("fundamentos_juridicos", []))
+
         prompt = f"""
         Você é um advogado cível especialista em elaboração de contestações.
 
@@ -30,10 +33,10 @@ def testar_ia():
         {dados_peticao.get("fatos", "")}
 
         Pedidos do autor:
-        {dados_peticao.get("pedidos", [])}
+        {pedidos}
 
         Fundamentos jurídicos alegados pelo autor:
-        {dados_peticao.get("fundamentos_juridicos", [])}
+        {fundamentos}
 
         Estruture sua resposta da seguinte forma:
         1. Breve Síntese da Petição Inicial
@@ -47,21 +50,19 @@ def testar_ia():
         Seja claro, técnico e preciso, utilizando linguagem jurídica atual e objetiva.
         """
 
-        stream = client.chat.completions.create(
+        # IA jurídica com baixa memória (stream desativado)
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Você é um advogado especializado em direito civil, especialista em petições."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=1500,
-            stream=True
+            max_tokens=1100,
+            stream=False
         )
 
-        corpo_gerado = ""
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                corpo_gerado += chunk.choices[0].delta.content
+        corpo_gerado = response.choices[0].message.content.strip()
 
         return jsonify({
             "mensagem": "Pré-visualização gerada com sucesso!",
