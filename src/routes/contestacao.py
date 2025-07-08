@@ -2,7 +2,6 @@ import os
 from flask import Blueprint, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from datetime import datetime
-from docx import Document
 from docxtpl import DocxTemplate
 from src.utils.pdf_processor import PDFProcessor
 from openai import OpenAI
@@ -50,7 +49,9 @@ def gerar_contestacao():
         return jsonify({"erro": "Dados incompletos para gerar contestação"}), 400
 
     try:
-        # Etapa 1: Geração do corpo com IA jurídica
+        pedidos = "\n".join(dados_peticao.get("pedidos", []))
+        fundamentos = "\n".join(dados_peticao.get("fundamentos_juridicos", []))
+
         prompt = f"""
         Elabore uma contestação jurídica completa, clara e técnica, baseada nos elementos abaixo extraídos da petição inicial:
 
@@ -63,42 +64,34 @@ def gerar_contestacao():
         {dados_peticao.get("fatos", "")}
 
         Pedidos do autor:
-        {dados_peticao.get("pedidos", [])}
+        {pedidos}
 
         Fundamentos jurídicos apresentados pelo autor:
-        {dados_peticao.get("fundamentos_juridicos", [])}
+        {fundamentos}
 
-        Responda ponto a ponto, rebatendo cada argumento com base no direito civil atual, com uma linguagem técnica e moderna, sem inventar jurisprudência.
+        Reponda ponto a ponto, rebatendo cada argumento com base no direito civil atual, com uma linguagem técnica e moderna, sem inventar jurisprudência.
         """
 
         client = OpenAI()
-
-        stream = client.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Você é um advogado civilista, especialista em redigir contestações técnicas e atuais."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=1500,
-            stream=True
+            max_tokens=1100,
+            stream=False
         )
 
-        corpo_gerado = ""
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                corpo_gerado += chunk.choices[0].delta.content
+        corpo_gerado = response.choices[0].message.content.strip()
 
-        # Etapa 2: Geração do Word com o corpo da contestação usando placeholder
         doc = DocxTemplate(MODELO_PATH)
-        context = {
-            "corpo_contestacao": corpo_gerado.strip()
-        }
-        doc.render(context)
+        doc.render({"corpo_contestacao": corpo_gerado})
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_{timestamp}.docx"
-        output_path = os.path.join(UPLOAD_FOLDER, output_filename)
+        output_path = os.path.join("/tmp", output_filename)
         doc.save(output_path)
 
         return send_file(
@@ -110,7 +103,7 @@ def gerar_contestacao():
 
     except Exception as e:
         print(f"Erro ao gerar contestação: {e}")
-        return jsonify({"erro": f"Erro ao gerar contestação: {str(e)}"}), 500
+        return jsonify({"erro": str(e)}), 500
 
 
 @contestacao_bp.route("/testar-ia-docx", methods=["POST"])
@@ -124,7 +117,9 @@ def testar_ia_gerar_word():
         return jsonify({"erro": "Dados da petição ausentes"}), 400
 
     try:
-        # Prompt IA
+        pedidos = "\n".join(dados_peticao.get("pedidos", []))
+        fundamentos = "\n".join(dados_peticao.get("fundamentos_juridicos", []))
+
         prompt = f"""
         Elabore uma contestação jurídica completa, clara e técnica, baseada nos elementos abaixo extraídos da petição inicial:
 
@@ -137,44 +132,38 @@ def testar_ia_gerar_word():
         {dados_peticao.get("fatos", "")}
 
         Pedidos do autor:
-        {dados_peticao.get("pedidos", [])}
+        {pedidos}
 
         Fundamentos jurídicos apresentados pelo autor:
-        {dados_peticao.get("fundamentos_juridicos", [])}
+        {fundamentos}
 
-        Responda ponto a ponto, rebatendo cada argumento com base no direito civil atual, com uma linguagem técnica e moderna, sem inventar jurisprudência.
+        Reponda ponto a ponto, rebatendo cada argumento com base no direito civil atual, com uma linguagem técnica e moderna, sem inventar jurisprudência.
         """
 
         client = OpenAI()
-        stream = client.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Você é um advogado civilista, especialista em redigir contestações técnicas e atuais."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=1500,
-            stream=True
+            max_tokens=1100,
+            stream=False
         )
 
-        corpo_gerado = ""
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                corpo_gerado += chunk.choices[0].delta.content
+        corpo_gerado = response.choices[0].message.content.strip()
 
         doc = DocxTemplate(MODELO_PATH)
-        context = {
-            "corpo_contestacao": corpo_gerado.strip()
-        }
-        doc.render(context)
+        doc.render({"corpo_contestacao": corpo_gerado})
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_filename = f"contestacao_preview_{timestamp}.docx"
-        output_path = os.path.join(UPLOAD_FOLDER, output_filename)
+        output_path = os.path.join("/tmp", output_filename)
         doc.save(output_path)
 
         return jsonify({
-            "corpo_contestacao": corpo_gerado.strip(),
+            "corpo_contestacao": corpo_gerado,
             "arquivo_word": f"/download/{output_filename}"
         })
 
@@ -185,7 +174,7 @@ def testar_ia_gerar_word():
 
 @contestacao_bp.route("/download/<filename>", methods=["GET"])
 def baixar_arquivo(filename):
-    caminho = os.path.join(UPLOAD_FOLDER, filename)
+    caminho = os.path.join("/tmp", filename)
     if not os.path.isfile(caminho):
         return jsonify({"erro": "Arquivo não encontrado"}), 404
     return send_file(
