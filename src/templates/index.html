@@ -1,9 +1,4 @@
-from pathlib import Path
-
-# Caminho e conteúdo do arquivo HTML atualizado
-output_path = Path("/mnt/data/index_atualizado.html")
-
-html_content = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
@@ -196,9 +191,4 @@ html_content = """<!DOCTYPE html>
   </script>
 </body>
 </html>
-"""
-
-# Salvar
-output_path.write_text(html_content, encoding="utf-8")
-output_path.as_posix()
 
