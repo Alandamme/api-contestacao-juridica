@@ -31,6 +31,6 @@ httpx>=0.28.1         # Compatível com proxies e necessário p/ OpenAI SDK
 typing_extensions>=4.10.0
 
 # 🛠 Instalação robusta (opcional, mas recomendado)
-setuptools>=65.5.0
+setuptools>=65.5.0,<81
 wheel>=0.40.0
 
